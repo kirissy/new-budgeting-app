@@ -9,6 +9,18 @@ export type Frequency =
 
 export type GoalType = 'holiday' | 'emergency' | 'custom'
 
+export type ExpenseCategory =
+  | 'food_dining'
+  | 'groceries'
+  | 'transport'
+  | 'housing'
+  | 'utilities'
+  | 'shopping'
+  | 'entertainment'
+  | 'health'
+  | 'travel'
+  | 'other'
+
 export interface Profile {
   id: string
   user_id: string
@@ -27,7 +39,7 @@ export interface PayProfile {
   created_at: string
 }
 
-export interface Expense {
+export interface BudgetedExpense {
   id: string
   user_id: string
   name: string
@@ -36,6 +48,17 @@ export interface Expense {
   frequency: Frequency
   next_due_date: string | null
   active: boolean
+  created_at: string
+}
+
+export interface Expense {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  currency: string
+  category: ExpenseCategory
+  spent_on: string
   created_at: string
 }
 
@@ -75,8 +98,8 @@ export interface ExchangeRate {
 
 export interface BudgetBreakdown {
   income: number
-  expensesTotal: number
-  normalizedExpenses: ExpenseNormalized[]
+  budgetedExpensesTotal: number
+  normalizedBudgetedExpenses: BudgetedExpenseNormalized[]
   goalContributions: GoalContribution[]
   totalGoals: number
   investment: number
@@ -93,7 +116,7 @@ export interface GoalContribution {
   contributionInBase: number
 }
 
-export interface ExpenseNormalized extends Expense {
+export interface BudgetedExpenseNormalized extends BudgetedExpense {
   perCycleAmount: number
   perCycleAmountInBase: number
 }

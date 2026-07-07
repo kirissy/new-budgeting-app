@@ -15,10 +15,10 @@ interface Props {
 }
 
 export function BudgetDonut({ breakdown }: Props) {
-  const { income, normalizedExpenses, goalContributions, investment, currency } = breakdown
+  const { income, normalizedBudgetedExpenses, goalContributions, investment, currency } = breakdown
 
   const data = [
-    ...normalizedExpenses
+    ...normalizedBudgetedExpenses
       .filter((e) => e.perCycleAmountInBase > 0)
       .map((e, i) => ({
         name: e.name,

@@ -23,8 +23,8 @@ create table if not exists pay_profiles (
   unique(user_id)
 );
 
--- Expenses (recurring costs & subscriptions, each with their own frequency)
-create table if not exists expenses (
+-- Budgeted expenses (recurring costs & subscriptions, each with their own frequency)
+create table if not exists budgeted_expenses (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
@@ -33,6 +33,21 @@ create table if not exists expenses (
   frequency text not null check (frequency in ('daily','weekly','biweekly','semi-monthly','monthly','quarterly','annually')),
   next_due_date date,
   active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Expenses (transaction log of individual, actually-incurred expenses)
+create table if not exists expenses (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  amount numeric(20, 4) not null,
+  currency text not null default 'USD',
+  category text not null check (category in (
+    'food_dining','groceries','transport','housing','utilities',
+    'shopping','entertainment','health','travel','other'
+  )),
+  spent_on date not null default current_date,
   created_at timestamptz not null default now()
 );
 
@@ -75,6 +90,7 @@ create table if not exists exchange_rates (
 -- Row Level Security: only owners can see/edit their own data
 alter table profiles enable row level security;
 alter table pay_profiles enable row level security;
+alter table budgeted_expenses enable row level security;
 alter table expenses enable row level security;
 alter table goals enable row level security;
 alter table goal_contributions enable row level security;
@@ -85,7 +101,10 @@ create policy "Users can manage their own profile"
 create policy "Users can manage their own pay profile"
   on pay_profiles for all using (auth.uid() = user_id);
 
-create policy "Users can manage their own expenses"
+create policy "Users can manage their own budgeted expenses"
+  on budgeted_expenses for all using (auth.uid() = user_id);
+
+create policy "Users can manage their own expense logs"
   on expenses for all using (auth.uid() = user_id);
 
 create policy "Users can manage their own goals"

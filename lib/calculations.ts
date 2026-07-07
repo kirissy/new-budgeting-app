@@ -1,7 +1,7 @@
 import { differenceInDays, addDays } from 'date-fns'
 import type {
-  Expense,
-  ExpenseNormalized,
+  BudgetedExpense,
+  BudgetedExpenseNormalized,
   BudgetBreakdown,
   Frequency,
   Goal,
@@ -37,6 +37,16 @@ export function getNextPayDate(anchor: Date, freq: Frequency, from: Date): Date 
     next = addDays(next, daysPerCycle)
   }
   return next
+}
+
+export function getCurrentCycle(anchor: Date, freq: Frequency, today: Date): { start: Date; end: Date } {
+  const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
+  let end = new Date(anchor)
+  while (end <= today) {
+    end = addDays(end, daysPerCycle)
+  }
+  const start = addDays(end, -daysPerCycle)
+  return { start, end }
 }
 
 export function normalizeToCycle(
@@ -114,12 +124,12 @@ export function calculateGoalContribution(
   }
 }
 
-export function normalizeExpense(
-  expense: Expense,
+export function normalizeBudgetedExpense(
+  expense: BudgetedExpense,
   payFreq: Frequency,
   rates: Record<string, number>,
   baseCurrency: string
-): ExpenseNormalized {
+): BudgetedExpenseNormalized {
   const perCycleAmount = normalizeToCycle(expense.amount, expense.frequency, payFreq)
   const perCycleAmountInBase = convertCurrency(perCycleAmount, expense.currency, baseCurrency, rates)
   return { ...expense, perCycleAmount, perCycleAmountInBase }
@@ -127,7 +137,7 @@ export function normalizeExpense(
 
 export function calculateBudget(
   payProfile: PayProfile,
-  expenses: Expense[],
+  budgetedExpenses: BudgetedExpense[],
   goals: Goal[],
   rates: Record<string, number>,
   baseCurrency: string,
@@ -140,22 +150,22 @@ export function calculateBudget(
     rates
   )
 
-  const normalizedExpenses = expenses.filter((e) => e.active).map((e) =>
-    normalizeExpense(e, payProfile.frequency, rates, baseCurrency)
+  const normalizedBudgetedExpenses = budgetedExpenses.filter((e) => e.active).map((e) =>
+    normalizeBudgetedExpense(e, payProfile.frequency, rates, baseCurrency)
   )
-  const expensesTotal = normalizedExpenses.reduce((sum, e) => sum + e.perCycleAmountInBase, 0)
+  const budgetedExpensesTotal = normalizedBudgetedExpenses.reduce((sum, e) => sum + e.perCycleAmountInBase, 0)
 
   const goalContributions = goals.map((g) =>
     calculateGoalContribution(g, payProfile.frequency, today, rates, baseCurrency)
   )
   const totalGoals = goalContributions.reduce((sum, gc) => sum + gc.contributionInBase, 0)
 
-  const investment = income - expensesTotal - totalGoals
+  const investment = income - budgetedExpensesTotal - totalGoals
 
   return {
     income,
-    expensesTotal,
-    normalizedExpenses,
+    budgetedExpensesTotal,
+    normalizedBudgetedExpenses,
     goalContributions,
     totalGoals,
     investment,

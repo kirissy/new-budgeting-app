@@ -9,12 +9,12 @@ export default async function GoalsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: payProfile }, { data: goals }, { data: expenses }, { data: contributions }] =
+  const [{ data: profile }, { data: payProfile }, { data: goals }, { data: budgetedExpenses }, { data: contributions }] =
     await Promise.all([
       supabase.from('profiles').select('base_currency').eq('user_id', user.id).single(),
       supabase.from('pay_profiles').select('frequency, effective_date').eq('user_id', user.id).single(),
       supabase.from('goals').select('*').eq('user_id', user.id).order('created_at'),
-      supabase.from('expenses').select('amount, frequency, active').eq('user_id', user.id),
+      supabase.from('budgeted_expenses').select('amount, frequency, active').eq('user_id', user.id),
       supabase
         .from('goal_contributions')
         .select('*')
@@ -23,7 +23,7 @@ export default async function GoalsPage() {
     ])
 
   const payFrequency = (payProfile?.frequency ?? 'monthly') as Frequency
-  const expensesTotal = (expenses ?? [])
+  const expensesTotal = (budgetedExpenses ?? [])
     .filter((e) => e.active)
     .reduce((s, e) => s + normalizeToCycle(e.amount, e.frequency as Frequency, payFrequency), 0)
 

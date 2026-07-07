@@ -1,38 +1,39 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { ExpenseForm } from '@/components/forms/ExpenseForm'
-import { createExpense, updateExpense, deleteExpense, toggleExpenseActive } from '@/app/actions/expenses'
+import { createExpense, updateExpense, deleteExpense } from '@/app/actions/expenses'
 import { formatCurrency } from '@/lib/currencies'
-import { normalizeToCycle, FREQUENCY_LABELS } from '@/lib/calculations'
-import type { Expense, Frequency } from '@/lib/types'
+import { CATEGORY_LABELS } from '@/lib/categories'
+import type { Expense, ExpenseCategory } from '@/lib/types'
 
 interface Props {
   expenses: Expense[]
   defaultCurrency: string
-  payFrequency: Frequency
 }
 
-export function ExpensesClient({ expenses, defaultCurrency, payFrequency }: Props) {
+const categoryFilterOptions = [
+  { value: 'all', label: 'All categories' },
+  ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l })),
+]
+
+export function ExpensesClient({ expenses, defaultCurrency }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'all'>('all')
   const [, startTransition] = useTransition()
 
-  const activeExpenses = expenses.filter((e) => e.active)
-  const totalPerCycle = activeExpenses.reduce(
-    (s, e) => s + normalizeToCycle(e.amount, e.frequency, payFrequency),
-    0
+  const filteredExpenses = useMemo(
+    () => categoryFilter === 'all' ? expenses : expenses.filter((e) => e.category === categoryFilter),
+    [expenses, categoryFilter]
   )
 
   function openAdd() { setEditing(null); setModalOpen(true) }
   function openEdit(item: Expense) { setEditing(item); setModalOpen(true) }
   function closeModal() { setModalOpen(false); setEditing(null) }
-
-  function handleToggle(id: string, active: boolean) {
-    startTransition(async () => { await toggleExpenseActive(id, active) })
-  }
 
   function handleDelete(id: string) {
     startTransition(async () => { await deleteExpense(id) })
@@ -41,58 +42,48 @@ export function ExpensesClient({ expenses, defaultCurrency, payFrequency }: Prop
   return (
     <>
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div>
-            <span className="font-medium text-gray-900">
-              Per-cycle total
-            </span>
-            <span className="ml-2 text-lg font-bold text-violet-700">
-              {formatCurrency(totalPerCycle, defaultCurrency)}
-            </span>
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+          <div className="w-48">
+            <Select
+              name="category_filter"
+              options={categoryFilterOptions}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as ExpenseCategory | 'all')}
+            />
           </div>
           <Button onClick={openAdd} size="sm">+ Add expense</Button>
         </div>
 
-        {expenses.length === 0 ? (
+        {filteredExpenses.length === 0 ? (
           <div className="px-5 py-12 text-center text-gray-500 text-sm">
-            No expenses yet. Add your first recurring cost or subscription.
+            {expenses.length === 0 ? 'No expenses logged yet. Add your first one.' : 'No expenses in this category.'}
           </div>
         ) : (
           <ul className="divide-y divide-gray-50">
-            {expenses.map((expense) => {
-              const perCycle = normalizeToCycle(expense.amount, expense.frequency, payFrequency)
-              return (
-                <li key={expense.id} className={`px-5 py-3.5 ${!expense.active ? 'opacity-50' : ''}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={expense.active}
-                        onChange={(e) => handleToggle(expense.id, e.target.checked)}
-                        className="h-4 w-4 rounded accent-violet-600 flex-shrink-0"
-                        aria-label={`Toggle ${expense.name}`}
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{expense.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {formatCurrency(expense.amount, expense.currency)} / {FREQUENCY_LABELS[expense.frequency].toLowerCase()}
-                        </p>
-                      </div>
+            {filteredExpenses.map((expense) => (
+              <li key={expense.id} className="px-5 py-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 truncate">{expense.name}</p>
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                        {CATEGORY_LABELS[expense.category]}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(perCycle, expense.currency)}
-                        </p>
-                        <p className="text-xs text-gray-400">per cycle</p>
-                      </div>
-                      <button onClick={() => openEdit(expense)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Edit</button>
-                      <button onClick={() => handleDelete(expense.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
-                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {new Date(expense.spent_on).toLocaleDateString()}
+                    </p>
                   </div>
-                </li>
-              )
-            })}
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                    <p className="text-sm font-medium text-gray-900">
+                      {formatCurrency(expense.amount, expense.currency)}
+                    </p>
+                    <button onClick={() => openEdit(expense)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Edit</button>
+                    <button onClick={() => handleDelete(expense.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                  </div>
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -100,7 +91,6 @@ export function ExpensesClient({ expenses, defaultCurrency, payFrequency }: Prop
       <Modal open={modalOpen} onClose={closeModal} title={editing ? 'Edit expense' : 'Add expense'}>
         <ExpenseForm
           defaultCurrency={defaultCurrency}
-          payFrequency={payFrequency}
           item={editing ?? undefined}
           onSubmit={editing ? (fd) => updateExpense(editing.id, fd) : createExpense}
           onDone={closeModal}
