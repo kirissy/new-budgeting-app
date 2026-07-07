@@ -5,7 +5,8 @@ import type { BudgetBreakdown } from '@/lib/types'
 import { formatCurrency, getCurrencySymbol } from '@/lib/currencies'
 import { getPercentage } from '@/lib/calculations'
 
-const COLORS = ['#7c3aed', '#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626', '#6b7280']
+const COLORS = ['#7c3aed', '#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626']
+const INVESTMENT_COLOR = '#6b7280'
 
 const GOAL_COLORS = ['#0891b2', '#059669', '#d97706', '#dc2626', '#8b5cf6', '#ec4899']
 
@@ -14,11 +15,16 @@ interface Props {
 }
 
 export function BudgetDonut({ breakdown }: Props) {
-  const { income, expensesTotal, billsTotal, goalContributions, investment, currency } = breakdown
+  const { income, normalizedExpenses, goalContributions, investment, currency } = breakdown
 
   const data = [
-    { name: 'Expenses', value: Math.max(0, expensesTotal), color: COLORS[0] },
-    { name: 'Bills', value: Math.max(0, billsTotal), color: COLORS[1] },
+    ...normalizedExpenses
+      .filter((e) => e.perCycleAmountInBase > 0)
+      .map((e, i) => ({
+        name: e.name,
+        value: e.perCycleAmountInBase,
+        color: COLORS[i % COLORS.length],
+      })),
     ...goalContributions
       .filter((gc) => gc.contributionInBase > 0)
       .map((gc, i) => ({
@@ -26,7 +32,7 @@ export function BudgetDonut({ breakdown }: Props) {
         value: gc.contributionInBase,
         color: GOAL_COLORS[i % GOAL_COLORS.length],
       })),
-    { name: 'Investment', value: Math.max(0, investment), color: COLORS[5] },
+    { name: 'Investment', value: Math.max(0, investment), color: INVESTMENT_COLOR },
   ].filter((d) => d.value > 0)
 
   const sym = getCurrencySymbol(currency)

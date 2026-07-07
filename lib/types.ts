@@ -27,16 +27,7 @@ export interface PayProfile {
   created_at: string
 }
 
-export interface ExpenseItem {
-  id: string
-  user_id: string
-  name: string
-  amount: number
-  currency: string
-  created_at: string
-}
-
-export interface Bill {
+export interface Expense {
   id: string
   user_id: string
   name: string
@@ -85,7 +76,7 @@ export interface ExchangeRate {
 export interface BudgetBreakdown {
   income: number
   expensesTotal: number
-  billsTotal: number
+  normalizedExpenses: ExpenseNormalized[]
   goalContributions: GoalContribution[]
   totalGoals: number
   investment: number
@@ -102,7 +93,7 @@ export interface GoalContribution {
   contributionInBase: number
 }
 
-export interface BillNormalized extends Bill {
+export interface ExpenseNormalized extends Expense {
   perCycleAmount: number
   perCycleAmountInBase: number
 }

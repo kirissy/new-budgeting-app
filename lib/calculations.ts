@@ -1,13 +1,12 @@
 import { differenceInDays, addDays } from 'date-fns'
 import type {
-  Bill,
-  BillNormalized,
+  Expense,
+  ExpenseNormalized,
   BudgetBreakdown,
   Frequency,
   Goal,
   GoalContribution,
   PayProfile,
-  ExpenseItem,
 } from './types'
 import { convertCurrency } from './currencies'
 
@@ -115,21 +114,20 @@ export function calculateGoalContribution(
   }
 }
 
-export function normalizeBill(
-  bill: Bill,
+export function normalizeExpense(
+  expense: Expense,
   payFreq: Frequency,
   rates: Record<string, number>,
   baseCurrency: string
-): BillNormalized {
-  const perCycleAmount = normalizeToCycle(bill.amount, bill.frequency, payFreq)
-  const perCycleAmountInBase = convertCurrency(perCycleAmount, bill.currency, baseCurrency, rates)
-  return { ...bill, perCycleAmount, perCycleAmountInBase }
+): ExpenseNormalized {
+  const perCycleAmount = normalizeToCycle(expense.amount, expense.frequency, payFreq)
+  const perCycleAmountInBase = convertCurrency(perCycleAmount, expense.currency, baseCurrency, rates)
+  return { ...expense, perCycleAmount, perCycleAmountInBase }
 }
 
 export function calculateBudget(
   payProfile: PayProfile,
-  expenses: ExpenseItem[],
-  bills: Bill[],
+  expenses: Expense[],
   goals: Goal[],
   rates: Record<string, number>,
   baseCurrency: string,
@@ -142,26 +140,22 @@ export function calculateBudget(
     rates
   )
 
-  const expensesTotal = expenses.reduce((sum, e) => {
-    return sum + convertCurrency(e.amount, e.currency, baseCurrency, rates)
-  }, 0)
-
-  const normalizedBills = bills.filter((b) => b.active).map((b) =>
-    normalizeBill(b, payProfile.frequency, rates, baseCurrency)
+  const normalizedExpenses = expenses.filter((e) => e.active).map((e) =>
+    normalizeExpense(e, payProfile.frequency, rates, baseCurrency)
   )
-  const billsTotal = normalizedBills.reduce((sum, b) => sum + b.perCycleAmountInBase, 0)
+  const expensesTotal = normalizedExpenses.reduce((sum, e) => sum + e.perCycleAmountInBase, 0)
 
   const goalContributions = goals.map((g) =>
     calculateGoalContribution(g, payProfile.frequency, today, rates, baseCurrency)
   )
   const totalGoals = goalContributions.reduce((sum, gc) => sum + gc.contributionInBase, 0)
 
-  const investment = income - expensesTotal - billsTotal - totalGoals
+  const investment = income - expensesTotal - totalGoals
 
   return {
     income,
     expensesTotal,
-    billsTotal,
+    normalizedExpenses,
     goalContributions,
     totalGoals,
     investment,

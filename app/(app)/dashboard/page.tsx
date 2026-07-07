@@ -29,13 +29,11 @@ export default async function DashboardPage() {
     { data: profile },
     { data: payProfile },
     { data: expenses },
-    { data: bills },
     { data: goals },
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('user_id', user.id).single(),
     supabase.from('pay_profiles').select('*').eq('user_id', user.id).single(),
-    supabase.from('expense_items').select('*').eq('user_id', user.id).order('created_at'),
-    supabase.from('bills').select('*').eq('user_id', user.id).order('created_at'),
+    supabase.from('expenses').select('*').eq('user_id', user.id).order('created_at'),
     supabase.from('goals').select('*').eq('user_id', user.id).order('created_at'),
   ])
 
@@ -48,7 +46,6 @@ export default async function DashboardPage() {
   const breakdown = calculateBudget(
     payProfile,
     expenses ?? [],
-    bills ?? [],
     goals ?? [],
     rates,
     profile.base_currency,
@@ -73,11 +70,10 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {[
           { label: 'Income', value: breakdown.income, color: 'text-violet-700' },
           { label: 'Expenses', value: breakdown.expensesTotal, color: 'text-indigo-600' },
-          { label: 'Bills', value: breakdown.billsTotal, color: 'text-sky-600' },
           { label: 'Investment', value: breakdown.investment, color: investmentColor },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl border border-gray-100 p-4">
@@ -108,16 +104,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {!expenses?.length && !bills?.length && !goals?.length && (
+      {!expenses?.length && !goals?.length && (
         <div className="mt-6 bg-violet-50 rounded-2xl border border-violet-100 p-6">
           <h3 className="font-semibold text-violet-900">Complete your setup</h3>
-          <p className="text-sm text-violet-700 mt-1">Add your expenses, bills, and goals to get your full budget breakdown.</p>
+          <p className="text-sm text-violet-700 mt-1">Add your expenses and goals to get your full budget breakdown.</p>
           <div className="flex flex-wrap gap-2 mt-3">
             <Link href="/expenses" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
               + Add expenses
-            </Link>
-            <Link href="/bills" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
-              + Add bills
             </Link>
             <Link href="/goals" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
               + Add goals

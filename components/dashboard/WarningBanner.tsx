@@ -14,7 +14,7 @@ export function WarningBanner({ amount, currency }: Props) {
       <div>
         <p className="font-medium text-red-800">Budget exceeded by {formatCurrency(Math.abs(amount), currency)}</p>
         <p className="text-sm text-red-700 mt-0.5">
-          Your expenses, bills, and goals exceed your income. Reduce contributions or expenses to stay on track.
+          Your expenses and goals exceed your income. Reduce contributions or expenses to stay on track.
         </p>
       </div>
     </div>

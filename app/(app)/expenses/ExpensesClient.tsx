@@ -4,44 +4,38 @@ import { useState, useTransition } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ExpenseForm } from '@/components/forms/ExpenseForm'
-import { createExpense, updateExpense, deleteExpense } from '@/app/actions/expenses'
+import { createExpense, updateExpense, deleteExpense, toggleExpenseActive } from '@/app/actions/expenses'
 import { formatCurrency } from '@/lib/currencies'
-import type { ExpenseItem } from '@/lib/types'
+import { normalizeToCycle, FREQUENCY_LABELS } from '@/lib/calculations'
+import type { Expense, Frequency } from '@/lib/types'
 
 interface Props {
-  expenses: ExpenseItem[]
+  expenses: Expense[]
   defaultCurrency: string
+  payFrequency: Frequency
 }
 
-export function ExpensesClient({ expenses, defaultCurrency }: Props) {
+export function ExpensesClient({ expenses, defaultCurrency, payFrequency }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<ExpenseItem | null>(null)
-  const [deleting, startDelete] = useTransition()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Expense | null>(null)
+  const [, startTransition] = useTransition()
 
-  const total = expenses.reduce((s, e) => s + e.amount, 0)
+  const activeExpenses = expenses.filter((e) => e.active)
+  const totalPerCycle = activeExpenses.reduce(
+    (s, e) => s + normalizeToCycle(e.amount, e.frequency, payFrequency),
+    0
+  )
 
-  function openAdd() {
-    setEditing(null)
-    setModalOpen(true)
+  function openAdd() { setEditing(null); setModalOpen(true) }
+  function openEdit(item: Expense) { setEditing(item); setModalOpen(true) }
+  function closeModal() { setModalOpen(false); setEditing(null) }
+
+  function handleToggle(id: string, active: boolean) {
+    startTransition(async () => { await toggleExpenseActive(id, active) })
   }
 
-  function openEdit(item: ExpenseItem) {
-    setEditing(item)
-    setModalOpen(true)
-  }
-
-  function closeModal() {
-    setModalOpen(false)
-    setEditing(null)
-  }
-
-  async function handleDelete(id: string) {
-    setDeletingId(id)
-    startDelete(async () => {
-      await deleteExpense(id)
-      setDeletingId(null)
-    })
+  function handleDelete(id: string) {
+    startTransition(async () => { await deleteExpense(id) })
   }
 
   return (
@@ -49,61 +43,64 @@ export function ExpensesClient({ expenses, defaultCurrency }: Props) {
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
-            <span className="font-medium text-gray-900">Total per cycle</span>
+            <span className="font-medium text-gray-900">
+              Per-cycle total
+            </span>
             <span className="ml-2 text-lg font-bold text-violet-700">
-              {formatCurrency(total, defaultCurrency)}
+              {formatCurrency(totalPerCycle, defaultCurrency)}
             </span>
           </div>
-          <Button onClick={openAdd} size="sm">
-            + Add expense
-          </Button>
+          <Button onClick={openAdd} size="sm">+ Add expense</Button>
         </div>
 
         {expenses.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500">
-            <p className="text-sm">No expenses yet. Add your first one.</p>
+          <div className="px-5 py-12 text-center text-gray-500 text-sm">
+            No expenses yet. Add your first recurring cost or subscription.
           </div>
         ) : (
           <ul className="divide-y divide-gray-50">
-            {expenses.map((item) => (
-              <li key={item.id} className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-sm text-gray-700">{item.name}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(item.amount, item.currency)}
-                  </span>
-                  {item.currency !== defaultCurrency && (
-                    <span className="text-xs text-gray-400">{item.currency}</span>
-                  )}
-                  <button
-                    onClick={() => openEdit(item)}
-                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                    aria-label={`Edit ${item.name}`}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    disabled={deleting && deletingId === item.id}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                    aria-label={`Delete ${item.name}`}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
+            {expenses.map((expense) => {
+              const perCycle = normalizeToCycle(expense.amount, expense.frequency, payFrequency)
+              return (
+                <li key={expense.id} className={`px-5 py-3.5 ${!expense.active ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={expense.active}
+                        onChange={(e) => handleToggle(expense.id, e.target.checked)}
+                        className="h-4 w-4 rounded accent-violet-600 flex-shrink-0"
+                        aria-label={`Toggle ${expense.name}`}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{expense.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {formatCurrency(expense.amount, expense.currency)} / {FREQUENCY_LABELS[expense.frequency].toLowerCase()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">
+                          {formatCurrency(perCycle, expense.currency)}
+                        </p>
+                        <p className="text-xs text-gray-400">per cycle</p>
+                      </div>
+                      <button onClick={() => openEdit(expense)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Edit</button>
+                      <button onClick={() => handleDelete(expense.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>
 
-      <Modal
-        open={modalOpen}
-        onClose={closeModal}
-        title={editing ? 'Edit expense' : 'Add expense'}
-      >
+      <Modal open={modalOpen} onClose={closeModal} title={editing ? 'Edit expense' : 'Add expense'}>
         <ExpenseForm
           defaultCurrency={defaultCurrency}
+          payFrequency={payFrequency}
           item={editing ?? undefined}
           onSubmit={editing ? (fd) => updateExpense(editing.id, fd) : createExpense}
           onDone={closeModal}

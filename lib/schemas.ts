@@ -17,16 +17,7 @@ export const profileSchema = z.object({
   base_currency: z.string().min(1, 'Base currency is required'),
 })
 
-export const expenseItemSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-  amount: z
-    .string()
-    .min(1, 'Amount is required')
-    .refine((v) => !isNaN(Number(v)) && Number(v) > 0, 'Must be a positive number'),
-  currency: z.string().min(1, 'Currency is required'),
-})
-
-export const billSchema = z.object({
+export const expenseSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   amount: z
     .string()
@@ -67,6 +58,5 @@ export const manualContributionSchema = z.object({
 export type PayProfileInput = z.infer<typeof payProfileSchema>
 export type ManualContributionInput = z.infer<typeof manualContributionSchema>
 export type ProfileInput = z.infer<typeof profileSchema>
-export type ExpenseItemInput = z.infer<typeof expenseItemSchema>
-export type BillInput = z.infer<typeof billSchema>
+export type ExpenseInput = z.infer<typeof expenseSchema>
 export type GoalInput = z.infer<typeof goalSchema>
