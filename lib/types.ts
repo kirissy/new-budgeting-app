@@ -57,8 +57,21 @@ export interface Goal {
   currency: string
   target_date: string | null
   current_saved: number
+  last_deposit_date: string | null
   created_at: string
   updated_at: string
+}
+
+export type ContributionSource = 'scheduled' | 'manual'
+
+export interface GoalContributionLog {
+  id: string
+  goal_id: string
+  user_id: string
+  amount: number
+  source: ContributionSource
+  contributed_on: string
+  created_at: string
 }
 
 export interface ExchangeRate {

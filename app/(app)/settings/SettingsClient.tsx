@@ -101,6 +101,14 @@ export function SettingsClient({ profile, payProfile, email }: Props) {
           options={frequencyOptions}
           defaultValue={payProfile?.frequency ?? 'monthly'}
         />
+        <Input
+          label="Payday"
+          name="effective_date"
+          type="date"
+          defaultValue={payProfile?.effective_date ?? new Date().toISOString().split('T')[0]}
+          hint="A recent or upcoming pay date — used to schedule automatic goal deposits"
+          required
+        />
         {incomeError && <p className="text-sm text-red-600">{incomeError}</p>}
         {incomeSuccess && <p className="text-sm text-emerald-600">Saved.</p>}
         <Button type="submit" loading={pending} size="sm">Save income</Button>

@@ -1,4 +1,4 @@
-import { differenceInDays } from 'date-fns'
+import { differenceInDays, addDays } from 'date-fns'
 import type {
   Bill,
   BillNormalized,
@@ -29,6 +29,15 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   annually: 'Annually',
+}
+
+export function getNextPayDate(anchor: Date, freq: Frequency, from: Date): Date {
+  const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
+  let next = new Date(anchor)
+  while (next < from) {
+    next = addDays(next, daysPerCycle)
+  }
+  return next
 }
 
 export function normalizeToCycle(

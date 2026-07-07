@@ -32,6 +32,7 @@ export async function upsertPayProfile(formData: FormData) {
     income_amount: formData.get('income_amount'),
     currency: formData.get('currency'),
     frequency: formData.get('frequency'),
+    effective_date: formData.get('effective_date'),
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -40,7 +41,7 @@ export async function upsertPayProfile(formData: FormData) {
     income_amount: Number(parsed.data.income_amount),
     currency: parsed.data.currency,
     frequency: parsed.data.frequency,
-    effective_date: new Date().toISOString().split('T')[0],
+    effective_date: parsed.data.effective_date,
   }, { onConflict: 'user_id' })
 
   if (error) return { error: error.message }

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/goal-deposits",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

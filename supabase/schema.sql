@@ -56,8 +56,20 @@ create table if not exists goals (
   currency text not null default 'USD',
   target_date date,
   current_saved numeric(20, 4) not null default 0,
+  last_deposit_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+-- Goal contributions ledger (both scheduled auto-deposits and manual top-ups)
+create table if not exists goal_contributions (
+  id uuid primary key default uuid_generate_v4(),
+  goal_id uuid not null references goals(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  amount numeric(20, 4) not null,
+  source text not null check (source in ('scheduled','manual')),
+  contributed_on date not null default current_date,
+  created_at timestamptz not null default now()
 );
 
 -- Exchange rates (fetched periodically, used for multi-currency conversion)
@@ -76,6 +88,7 @@ alter table pay_profiles enable row level security;
 alter table expense_items enable row level security;
 alter table bills enable row level security;
 alter table goals enable row level security;
+alter table goal_contributions enable row level security;
 
 create policy "Users can manage their own profile"
   on profiles for all using (auth.uid() = user_id);
@@ -91,6 +104,9 @@ create policy "Users can manage their own bills"
 
 create policy "Users can manage their own goals"
   on goals for all using (auth.uid() = user_id);
+
+create policy "Users can manage their own goal contributions"
+  on goal_contributions for all using (auth.uid() = user_id);
 
 -- Exchange rates are public read (no user-scoped data)
 alter table exchange_rates enable row level security;
