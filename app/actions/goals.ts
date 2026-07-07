@@ -1,0 +1,105 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { goalSchema } from '@/lib/schemas'
+
+export async function createGoal(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const parsed = goalSchema.safeParse({
+    name: formData.get('name'),
+    type: formData.get('type'),
+    target_amount: formData.get('target_amount'),
+    currency: formData.get('currency'),
+    target_date: formData.get('target_date') || undefined,
+    current_saved: formData.get('current_saved') || '0',
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase.from('goals').insert({
+    user_id: user.id,
+    name: parsed.data.name,
+    type: parsed.data.type,
+    target_amount: Number(parsed.data.target_amount),
+    currency: parsed.data.currency,
+    target_date: parsed.data.target_date || null,
+    current_saved: Number(parsed.data.current_saved) || 0,
+  })
+
+  if (error) return { error: error.message }
+  revalidatePath('/goals')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function updateGoal(id: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const parsed = goalSchema.safeParse({
+    name: formData.get('name'),
+    type: formData.get('type'),
+    target_amount: formData.get('target_amount'),
+    currency: formData.get('currency'),
+    target_date: formData.get('target_date') || undefined,
+    current_saved: formData.get('current_saved') || '0',
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const { error } = await supabase
+    .from('goals')
+    .update({
+      name: parsed.data.name,
+      type: parsed.data.type,
+      target_amount: Number(parsed.data.target_amount),
+      currency: parsed.data.currency,
+      target_date: parsed.data.target_date || null,
+      current_saved: Number(parsed.data.current_saved) || 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/goals')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function updateGoalSaved(id: string, currentSaved: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('goals')
+    .update({ current_saved: currentSaved, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/goals')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function deleteGoal(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('goals')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/goals')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
