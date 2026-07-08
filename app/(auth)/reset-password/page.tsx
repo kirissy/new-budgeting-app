@@ -94,6 +94,7 @@ export default function ResetPasswordPage() {
       <Input
         label="New password"
         type="password"
+        revealable
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="At least 8 characters"
@@ -105,6 +106,7 @@ export default function ResetPasswordPage() {
       <Input
         label="Confirm password"
         type="password"
+        revealable
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         placeholder="At least 8 characters"
