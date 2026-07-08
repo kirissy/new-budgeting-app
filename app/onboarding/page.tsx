@@ -13,12 +13,12 @@ const currencyOptions = CURRENCIES.map((c) => ({ value: c.code, label: `${c.code
 const frequencyOptions = Object.entries(FREQUENCY_LABELS).map(([v, l]) => ({ value: v, label: l }))
 
 const STEPS = ['Currency', 'Income']
-const [baseCurrency, setBaseCurrency] = useState('USD')
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
+  const [baseCurrency, setBaseCurrency] = useState('USD')
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
 
