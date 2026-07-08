@@ -18,6 +18,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0)
   const [error, setError] = useState('')
   const [pending, startTransition] = useTransition()
+  const [baseCurrency, setBaseCurrency] = useState('USD')
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -79,6 +80,7 @@ export default function OnboardingPage() {
                   name="base_currency"
                   options={currencyOptions}
                   defaultValue="USD"
+                  onChange={(result) => setBaseCurrency(result.target.value)}
                 />
               </>
             )}
@@ -105,7 +107,7 @@ export default function OnboardingPage() {
                     label="Currency"
                     name="currency"
                     options={currencyOptions}
-                    defaultValue="USD"
+                    defaultValue={baseCurrency}
                   />
                 </div>
                 <Select

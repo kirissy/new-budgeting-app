@@ -65,6 +65,7 @@ create table if not exists goals (
   currency text not null default 'USD',
   target_date date,
   current_saved numeric(20, 4) not null default 0,
+  interest_rate numeric(6, 3) not null default 0,   -- annual %, e.g. 5.000 for 5%
   last_deposit_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

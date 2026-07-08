@@ -16,6 +16,7 @@ export async function createGoal(formData: FormData) {
     currency: formData.get('currency'),
     target_date: formData.get('target_date') || undefined,
     current_saved: formData.get('current_saved') || '0',
+    interest_rate: formData.get('interest_rate') || '0',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -27,6 +28,7 @@ export async function createGoal(formData: FormData) {
     currency: parsed.data.currency,
     target_date: parsed.data.target_date || null,
     current_saved: Number(parsed.data.current_saved) || 0,
+    interest_rate: Number(parsed.data.interest_rate) || 0,
   })
 
   if (error) return { error: error.message }
@@ -47,6 +49,7 @@ export async function updateGoal(id: string, formData: FormData) {
     currency: formData.get('currency'),
     target_date: formData.get('target_date') || undefined,
     current_saved: formData.get('current_saved') || '0',
+    interest_rate: formData.get('interest_rate') || '0',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -59,6 +62,7 @@ export async function updateGoal(id: string, formData: FormData) {
       currency: parsed.data.currency,
       target_date: parsed.data.target_date || null,
       current_saved: Number(parsed.data.current_saved) || 0,
+      interest_rate: Number(parsed.data.interest_rate) || 0,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

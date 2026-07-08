@@ -1,5 +1,6 @@
 'use client'
 
+import { format } from 'date-fns'
 import { useState, useTransition } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -104,7 +105,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
                       Target: {formatCurrency(goal.target_amount, goal.currency)}
-                      {goal.target_date && ` · Due ${new Date(goal.target_date).toLocaleDateString()}`}
+                      {goal.target_date && ` · Due ${format(new Date(goal.target_date), 'MMM d, yyyy')}`}
                     </p>
                   </div>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${statusColors[gc.status]}`}>
@@ -132,7 +133,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
                     <span className="text-gray-400 ml-1">({gc.remainingCycles} cycles left)</span>
                     {payAnchor && (
                       <div className="text-xs text-gray-400 mt-0.5">
-                        Next auto-deposit: {getNextPayDate(new Date(payAnchor), payFrequency, today).toLocaleDateString()}
+                        Next auto-deposit: {format(getNextPayDate(new Date(payAnchor), payFrequency, today), 'MMM d, yyyy')}
                         {' '}· {formatCurrency(gc.contribution, goal.currency)}
                       </div>
                     )}
@@ -183,7 +184,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
                         {contributionsByGoal[goal.id].slice(0, 10).map((c) => (
                           <li key={c.id} className="flex justify-between text-xs text-gray-500">
                             <span>
-                              {new Date(c.contributed_on).toLocaleDateString()}
+                              {format(new Date(c.contributed_on), 'MMM d, yyyy')}
                               <span className={`ml-2 px-1.5 py-0.5 rounded-full ${c.source === 'manual' ? 'bg-gray-100 text-gray-500' : 'bg-violet-50 text-violet-600'}`}>
                                 {c.source === 'manual' ? 'Manual' : 'Auto'}
                               </span>
