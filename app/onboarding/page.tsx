@@ -13,6 +13,7 @@ const currencyOptions = CURRENCIES.map((c) => ({ value: c.code, label: `${c.code
 const frequencyOptions = Object.entries(FREQUENCY_LABELS).map(([v, l]) => ({ value: v, label: l }))
 
 const STEPS = ['Currency', 'Income']
+const [baseCurrency, setBaseCurrency] = useState('USD')
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0)
@@ -79,6 +80,7 @@ export default function OnboardingPage() {
                   name="base_currency"
                   options={currencyOptions}
                   defaultValue="USD"
+                  onChange={(result) => setBaseCurrency(result.target.value)}
                 />
               </>
             )}
@@ -105,7 +107,7 @@ export default function OnboardingPage() {
                     label="Currency"
                     name="currency"
                     options={currencyOptions}
-                    defaultValue="USD"
+                    defaultValue={baseCurrency}
                   />
                 </div>
                 <Select
