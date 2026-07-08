@@ -31,6 +31,10 @@ create table if not exists budgeted_expenses (
   amount numeric(20, 4) not null,
   currency text not null default 'USD',
   frequency text not null check (frequency in ('daily','weekly','biweekly','semi-monthly','monthly','quarterly','annually')),
+  category text not null default 'other' check (category in (
+    'food_dining','groceries','transport','housing','utilities',
+    'shopping','entertainment','health','travel','other'
+  )),
   next_due_date date,
   active boolean not null default true,
   created_at timestamptz not null default now()

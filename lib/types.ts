@@ -46,6 +46,7 @@ export interface BudgetedExpense {
   amount: number
   currency: string
   frequency: Frequency
+  category: ExpenseCategory
   next_due_date: string | null
   active: boolean
   created_at: string

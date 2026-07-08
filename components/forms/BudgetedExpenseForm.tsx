@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { CURRENCIES, formatCurrency } from '@/lib/currencies'
 import { normalizeToCycle, FREQUENCY_LABELS } from '@/lib/calculations'
-import type { BudgetedExpense, Frequency } from '@/lib/types'
+import { CATEGORY_LABELS } from '@/lib/categories'
+import type { BudgetedExpense, ExpenseCategory, Frequency } from '@/lib/types'
 
 const currencyOptions = CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))
 const frequencyOptions = Object.entries(FREQUENCY_LABELS).map(([v, l]) => ({ value: v, label: l }))
+const categoryOptions = Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l }))
 
 interface Props {
   defaultCurrency: string
@@ -25,6 +27,7 @@ export function BudgetedExpenseForm({ defaultCurrency, payFrequency, item, onSub
   const [amount, setAmount] = useState(item?.amount?.toString() ?? '')
   const [freq, setFreq] = useState<Frequency>(item?.frequency ?? 'monthly')
   const [currency, setCurrency] = useState(item?.currency ?? defaultCurrency)
+  const [category, setCategory] = useState<ExpenseCategory>(item?.category ?? 'other')
   const formRef = useRef<HTMLFormElement>(null)
 
   const perCycle = amount && !isNaN(Number(amount)) && Number(amount) > 0
@@ -81,6 +84,13 @@ export function BudgetedExpenseForm({ defaultCurrency, payFrequency, item, onSub
         options={frequencyOptions}
         value={freq}
         onChange={(e) => setFreq(e.target.value as Frequency)}
+      />
+      <Select
+        label="Category"
+        name="category"
+        options={categoryOptions}
+        value={category}
+        onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
       />
       <Input
         label="Next due date (optional)"

@@ -7,6 +7,7 @@ import { BudgetedExpenseForm } from '@/components/forms/BudgetedExpenseForm'
 import { createBudgetedExpense, updateBudgetedExpense, deleteBudgetedExpense, toggleBudgetedExpenseActive } from '@/app/actions/budgetedExpenses'
 import { formatCurrency } from '@/lib/currencies'
 import { normalizeToCycle, FREQUENCY_LABELS } from '@/lib/calculations'
+import { CATEGORY_LABELS } from '@/lib/categories'
 import type { BudgetedExpense, Frequency } from '@/lib/types'
 
 interface Props {
@@ -73,7 +74,12 @@ export function BudgetedExpensesClient({ budgetedExpenses, defaultCurrency, payF
                         aria-label={`Toggle ${expense.name}`}
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{expense.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 truncate">{expense.name}</p>
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                            {CATEGORY_LABELS[expense.category]}
+                          </span>
+                        </div>
                         <p className="text-xs text-gray-500">
                           {formatCurrency(expense.amount, expense.currency)} / {FREQUENCY_LABELS[expense.frequency].toLowerCase()}
                         </p>

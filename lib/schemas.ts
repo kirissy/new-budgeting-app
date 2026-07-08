@@ -29,6 +29,7 @@ export const budgetedExpenseSchema = z.object({
     .refine((v) => !isNaN(Number(v)) && Number(v) > 0, 'Must be a positive number'),
   currency: z.string().min(1, 'Currency is required'),
   frequency: z.enum(FREQUENCIES, 'Select a frequency'),
+  category: z.enum(EXPENSE_CATEGORIES, 'Select a category'),
   next_due_date: z.string().optional(),
 })
 

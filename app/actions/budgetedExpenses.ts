@@ -14,6 +14,7 @@ export async function createBudgetedExpense(formData: FormData) {
     amount: formData.get('amount'),
     currency: formData.get('currency'),
     frequency: formData.get('frequency'),
+    category: formData.get('category'),
     next_due_date: formData.get('next_due_date') || undefined,
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -24,6 +25,7 @@ export async function createBudgetedExpense(formData: FormData) {
     amount: Number(parsed.data.amount),
     currency: parsed.data.currency,
     frequency: parsed.data.frequency,
+    category: parsed.data.category,
     next_due_date: parsed.data.next_due_date || null,
     active: true,
   })
@@ -44,6 +46,7 @@ export async function updateBudgetedExpense(id: string, formData: FormData) {
     amount: formData.get('amount'),
     currency: formData.get('currency'),
     frequency: formData.get('frequency'),
+    category: formData.get('category'),
     next_due_date: formData.get('next_due_date') || undefined,
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -55,6 +58,7 @@ export async function updateBudgetedExpense(id: string, formData: FormData) {
       amount: Number(parsed.data.amount),
       currency: parsed.data.currency,
       frequency: parsed.data.frequency,
+      category: parsed.data.category,
       next_due_date: parsed.data.next_due_date || null,
     })
     .eq('id', id)
