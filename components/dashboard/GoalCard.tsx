@@ -1,12 +1,14 @@
-import type { GoalContribution } from '@/lib/types'
-import { formatCurrency } from '@/lib/currencies'
-import { FREQUENCY_LABELS } from '@/lib/calculations'
-import type { Frequency } from '@/lib/types'
+import type { GoalContribution, Frequency } from '@/lib/types'
+import { formatCurrency, convertCurrency } from '@/lib/currencies'
+import { VIEW_PERIOD_LABELS, normalizeToCycle } from '@/lib/calculations'
 import { format } from 'date-fns'
 
 interface Props {
   gc: GoalContribution
   payFreq: Frequency
+  viewPeriod: Frequency
+  displayCurrency: string
+  rates: Record<string, number>
 }
 
 const STATUS_STYLES = {
@@ -23,9 +25,19 @@ const STATUS_LABELS = {
   'on-track': 'On track',
 }
 
-export function GoalCard({ gc, payFreq }: Props) {
+export function GoalCard({ gc, payFreq, viewPeriod, displayCurrency, rates }: Props) {
   const { goal, contribution, status, remainingCycles, remainingAmount } = gc
   const progress = Math.min(100, (goal.current_saved / goal.target_amount) * 100)
+
+  const currentSaved = convertCurrency(goal.current_saved, goal.currency, displayCurrency, rates)
+  const targetAmount = convertCurrency(goal.target_amount, goal.currency, displayCurrency, rates)
+  const remaining = convertCurrency(remainingAmount, goal.currency, displayCurrency, rates)
+  const contributionDisplay = convertCurrency(
+    normalizeToCycle(contribution, payFreq, viewPeriod),
+    goal.currency,
+    displayCurrency,
+    rates
+  )
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -45,7 +57,7 @@ export function GoalCard({ gc, payFreq }: Props) {
 
       <div className="mb-3">
         <div className="flex justify-between text-xs text-gray-500 mb-1">
-          <span>{formatCurrency(goal.current_saved, goal.currency)} saved</span>
+          <span>{formatCurrency(currentSaved, displayCurrency)} saved</span>
           <span>{Math.round(progress)}%</span>
         </div>
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -55,22 +67,22 @@ export function GoalCard({ gc, payFreq }: Props) {
           />
         </div>
         <div className="flex justify-between text-xs text-gray-500 mt-1">
-          <span>of {formatCurrency(goal.target_amount, goal.currency)}</span>
-          {remainingAmount > 0 && (
-            <span>{formatCurrency(remainingAmount, goal.currency)} left</span>
+          <span>of {formatCurrency(targetAmount, displayCurrency)}</span>
+          {remaining > 0 && (
+            <span>{formatCurrency(remaining, displayCurrency)} left</span>
           )}
         </div>
       </div>
 
       {status === 'on-track' && (
         <div className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-          <span className="font-medium text-gray-900">{formatCurrency(contribution, goal.currency)}</span>
-          <span className="text-gray-500"> / {FREQUENCY_LABELS[payFreq].toLowerCase()} · {remainingCycles} cycles left</span>
+          <span className="font-medium text-gray-900">{formatCurrency(contributionDisplay, displayCurrency)}</span>
+          <span className="text-gray-500"> / {VIEW_PERIOD_LABELS[viewPeriod].toLowerCase()} · {remainingCycles} pay cycles left</span>
         </div>
       )}
       {status === 'overdue' && (
         <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-          Full remaining amount due: <span className="font-medium">{formatCurrency(remainingAmount, goal.currency)}</span>
+          Full remaining amount due: <span className="font-medium">{formatCurrency(remaining, displayCurrency)}</span>
         </div>
       )}
       {status === 'no-date' && (

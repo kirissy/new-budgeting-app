@@ -1,4 +1,4 @@
-import { differenceInDays, addDays } from 'date-fns'
+import { differenceInDays, addDays, startOfWeek, addWeeks, startOfMonth, addMonths, startOfYear, addYears } from 'date-fns'
 import type {
   BudgetedExpense,
   BudgetedExpenseNormalized,
@@ -30,6 +30,15 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   annually: 'Annually',
 }
 
+// Selectable dashboard view periods — a subset of Frequency, with "annually"
+// relabeled "Yearly" to match how users refer to it when picking a view.
+export const VIEW_PERIODS = ['weekly', 'biweekly', 'monthly', 'annually'] as const satisfies readonly Frequency[]
+
+export const VIEW_PERIOD_LABELS: Record<Frequency, string> = {
+  ...FREQUENCY_LABELS,
+  annually: 'Yearly',
+}
+
 export function getNextPayDate(anchor: Date, freq: Frequency, from: Date): Date {
   const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
   let next = new Date(anchor)
@@ -47,6 +56,24 @@ export function getCurrentCycle(anchor: Date, freq: Frequency, today: Date): { s
   }
   const start = addDays(end, -daysPerCycle)
   return { start, end }
+}
+
+export function getCalendarPeriod(period: Frequency, today: Date): { start: Date; end: Date } {
+  switch (period) {
+    case 'weekly':
+      return {
+        start: startOfWeek(today, { weekStartsOn: 1 }),
+        end: startOfWeek(addWeeks(today, 1), { weekStartsOn: 1 }),
+      }
+    case 'biweekly':
+      return { start: addDays(today, -13), end: addDays(today, 1) }
+    case 'monthly':
+      return { start: startOfMonth(today), end: startOfMonth(addMonths(today, 1)) }
+    case 'annually':
+      return { start: startOfYear(today), end: startOfYear(addYears(today, 1)) }
+    default:
+      return { start: startOfMonth(today), end: startOfMonth(addMonths(today, 1)) }
+  }
 }
 
 export function normalizeToCycle(
