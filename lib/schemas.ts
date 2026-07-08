@@ -58,7 +58,9 @@ export const goalSchema = z.object({
     .refine((v) => !isNaN(Number(v)) && Number(v) > 0, 'Must be a positive number'),
   currency: z.string().min(1, 'Currency is required'),
   target_date: z.string().optional(),
-  current_saved: z,
+  current_saved: z
+    .string()
+    .refine((v) => v === '' || (!isNaN(Number(v)) && Number(v) >= 0), 'Must be a non-negative number'),
   interest_rate: z
     .string()
     .refine((v) => v === '' || (!isNaN(Number(v)) && Number(v) >= 0), 'Must be a non-negative number'),
