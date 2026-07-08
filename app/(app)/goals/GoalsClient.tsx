@@ -5,48 +5,60 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { GoalForm } from '@/components/forms/GoalForm'
-import { createGoal, updateGoal, deleteGoal, updateGoalSaved } from '@/app/actions/goals'
-import { calculateGoalContribution, FREQUENCY_LABELS } from '@/lib/calculations'
+import { createGoal, updateGoal, deleteGoal, addGoalContribution } from '@/app/actions/goals'
+import { calculateGoalContribution, getNextPayDate, FREQUENCY_LABELS } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/currencies'
-import type { Goal, Frequency } from '@/lib/types'
+import type { Goal, Frequency, GoalContributionLog } from '@/lib/types'
 
 interface Props {
   goals: Goal[]
   defaultCurrency: string
   payFrequency: Frequency
+  payAnchor: string | null
   expensesTotal: number
+  contributionsByGoal: Record<string, GoalContributionLog[]>
 }
 
 const GOAL_TYPE_LABELS = { holiday: 'Holiday', emergency: 'Emergency', custom: 'Custom' }
+const todayInputValue = () => new Date().toISOString().split('T')[0]
 
-export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTotal }: Props) {
+export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, expensesTotal, contributionsByGoal }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)
-  const [savedModalGoal, setSavedModalGoal] = useState<Goal | null>(null)
-  const [savedInput, setSavedInput] = useState('')
+  const [contribModalGoal, setContribModalGoal] = useState<Goal | null>(null)
+  const [contribAmount, setContribAmount] = useState('')
+  const [contribDate, setContribDate] = useState(todayInputValue())
+  const [contribError, setContribError] = useState('')
+  const [historyOpenId, setHistoryOpenId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   function openAdd() { setEditing(null); setModalOpen(true) }
   function openEdit(item: Goal) { setEditing(item); setModalOpen(true) }
   function closeModal() { setModalOpen(false); setEditing(null) }
 
-  function openSavedModal(goal: Goal) {
-    setSavedModalGoal(goal)
-    setSavedInput(goal.current_saved.toString())
+  function openContribModal(goal: Goal) {
+    setContribModalGoal(goal)
+    setContribAmount('')
+    setContribDate(todayInputValue())
+    setContribError('')
   }
-  function closeSavedModal() { setSavedModalGoal(null); setSavedInput('') }
+  function closeContribModal() { setContribModalGoal(null); setContribAmount(''); setContribError('') }
 
   function handleDelete(id: string) {
     startTransition(async () => { await deleteGoal(id) })
   }
 
-  function handleUpdateSaved() {
-    if (!savedModalGoal) return
-    const val = Number(savedInput)
-    if (isNaN(val) || val < 0) return
+  function handleAddContribution() {
+    if (!contribModalGoal) return
+    const val = Number(contribAmount)
+    if (isNaN(val) || val <= 0) { setContribError('Enter a positive amount'); return }
+    const formData = new FormData()
+    formData.set('amount', contribAmount)
+    formData.set('contributed_on', contribDate)
     startTransition(async () => {
-      await updateGoalSaved(savedModalGoal.id, val)
-      closeSavedModal()
+      const result = await addGoalContribution(contribModalGoal.id, formData)
+      if (result?.error) { setContribError(result.error); return }
+      closeContribModal()
     })
   }
 
@@ -118,6 +130,12 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTota
                     <span className="font-medium text-gray-900">{formatCurrency(gc.contribution, goal.currency)}</span>
                     {' '}/ {FREQUENCY_LABELS[payFrequency].toLowerCase()}
                     <span className="text-gray-400 ml-1">({gc.remainingCycles} cycles left)</span>
+                    {payAnchor && (
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        Next auto-deposit: {getNextPayDate(new Date(payAnchor), payFrequency, today).toLocaleDateString()}
+                        {' '}· {formatCurrency(gc.contribution, goal.currency)}
+                      </div>
+                    )}
                   </div>
                 )}
                 {gc.status === 'overdue' && (
@@ -133,10 +151,10 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTota
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => openSavedModal(goal)}
+                    onClick={() => openContribModal(goal)}
                     className="text-xs text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
                   >
-                    Update saved
+                    Add contribution
                   </button>
                   <button
                     onClick={() => openEdit(goal)}
@@ -151,6 +169,32 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTota
                     Delete
                   </button>
                 </div>
+
+                {(contributionsByGoal[goal.id]?.length ?? 0) > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => setHistoryOpenId(historyOpenId === goal.id ? null : goal.id)}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      {historyOpenId === goal.id ? 'Hide history' : `History (${contributionsByGoal[goal.id].length})`}
+                    </button>
+                    {historyOpenId === goal.id && (
+                      <ul className="mt-2 space-y-1">
+                        {contributionsByGoal[goal.id].slice(0, 10).map((c) => (
+                          <li key={c.id} className="flex justify-between text-xs text-gray-500">
+                            <span>
+                              {new Date(c.contributed_on).toLocaleDateString()}
+                              <span className={`ml-2 px-1.5 py-0.5 rounded-full ${c.source === 'manual' ? 'bg-gray-100 text-gray-500' : 'bg-violet-50 text-violet-600'}`}>
+                                {c.source === 'manual' ? 'Manual' : 'Auto'}
+                              </span>
+                            </span>
+                            <span className="font-medium text-gray-700">{formatCurrency(c.amount, goal.currency)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })
@@ -167,24 +211,32 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTota
         />
       </Modal>
 
-      <Modal open={!!savedModalGoal} onClose={closeSavedModal} title="Update amount saved">
-        {savedModalGoal && (
+      <Modal open={!!contribModalGoal} onClose={closeContribModal} title="Add contribution">
+        {contribModalGoal && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-gray-600">
-              Enter your current balance for <strong>{savedModalGoal.name}</strong>.
+              Add an amount to <strong>{contribModalGoal.name}</strong>. This adds to the current total and is logged with the date.
             </p>
             <Input
-              label="Amount currently saved"
+              label="Amount"
               type="number"
               step="0.01"
-              min="0"
-              value={savedInput}
-              onChange={(e) => setSavedInput(e.target.value)}
-              prefix={savedModalGoal.currency}
+              min="0.01"
+              value={contribAmount}
+              onChange={(e) => setContribAmount(e.target.value)}
+              prefix={contribModalGoal.currency}
             />
+            <Input
+              label="Date"
+              type="date"
+              value={contribDate}
+              max={todayInputValue()}
+              onChange={(e) => setContribDate(e.target.value)}
+            />
+            {contribError && <p className="text-sm text-red-600">{contribError}</p>}
             <div className="flex gap-2">
-              <Button onClick={handleUpdateSaved} className="flex-1">Save</Button>
-              <Button variant="secondary" onClick={closeSavedModal}>Cancel</Button>
+              <Button onClick={handleAddContribution} className="flex-1">Add</Button>
+              <Button variant="secondary" onClick={closeContribModal}>Cancel</Button>
             </div>
           </div>
         )}

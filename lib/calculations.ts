@@ -1,13 +1,12 @@
-import { differenceInDays } from 'date-fns'
+import { differenceInDays, addDays } from 'date-fns'
 import type {
-  Bill,
-  BillNormalized,
+  BudgetedExpense,
+  BudgetedExpenseNormalized,
   BudgetBreakdown,
   Frequency,
   Goal,
   GoalContribution,
   PayProfile,
-  ExpenseItem,
 } from './types'
 import { convertCurrency } from './currencies'
 
@@ -29,6 +28,25 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   annually: 'Annually',
+}
+
+export function getNextPayDate(anchor: Date, freq: Frequency, from: Date): Date {
+  const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
+  let next = new Date(anchor)
+  while (next < from) {
+    next = addDays(next, daysPerCycle)
+  }
+  return next
+}
+
+export function getCurrentCycle(anchor: Date, freq: Frequency, today: Date): { start: Date; end: Date } {
+  const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
+  let end = new Date(anchor)
+  while (end <= today) {
+    end = addDays(end, daysPerCycle)
+  }
+  const start = addDays(end, -daysPerCycle)
+  return { start, end }
 }
 
 export function normalizeToCycle(
@@ -106,21 +124,20 @@ export function calculateGoalContribution(
   }
 }
 
-export function normalizeBill(
-  bill: Bill,
+export function normalizeBudgetedExpense(
+  expense: BudgetedExpense,
   payFreq: Frequency,
   rates: Record<string, number>,
   baseCurrency: string
-): BillNormalized {
-  const perCycleAmount = normalizeToCycle(bill.amount, bill.frequency, payFreq)
-  const perCycleAmountInBase = convertCurrency(perCycleAmount, bill.currency, baseCurrency, rates)
-  return { ...bill, perCycleAmount, perCycleAmountInBase }
+): BudgetedExpenseNormalized {
+  const perCycleAmount = normalizeToCycle(expense.amount, expense.frequency, payFreq)
+  const perCycleAmountInBase = convertCurrency(perCycleAmount, expense.currency, baseCurrency, rates)
+  return { ...expense, perCycleAmount, perCycleAmountInBase }
 }
 
 export function calculateBudget(
   payProfile: PayProfile,
-  expenses: ExpenseItem[],
-  bills: Bill[],
+  budgetedExpenses: BudgetedExpense[],
   goals: Goal[],
   rates: Record<string, number>,
   baseCurrency: string,
@@ -133,30 +150,26 @@ export function calculateBudget(
     rates
   )
 
-  const expensesTotal = expenses.reduce((sum, e) => {
-    return sum + convertCurrency(e.amount, e.currency, baseCurrency, rates)
-  }, 0)
-
-  const normalizedBills = bills.filter((b) => b.active).map((b) =>
-    normalizeBill(b, payProfile.frequency, rates, baseCurrency)
+  const normalizedBudgetedExpenses = budgetedExpenses.filter((e) => e.active).map((e) =>
+    normalizeBudgetedExpense(e, payProfile.frequency, rates, baseCurrency)
   )
-  const billsTotal = normalizedBills.reduce((sum, b) => sum + b.perCycleAmountInBase, 0)
+  const budgetedExpensesTotal = normalizedBudgetedExpenses.reduce((sum, e) => sum + e.perCycleAmountInBase, 0)
 
   const goalContributions = goals.map((g) =>
     calculateGoalContribution(g, payProfile.frequency, today, rates, baseCurrency)
   )
   const totalGoals = goalContributions.reduce((sum, gc) => sum + gc.contributionInBase, 0)
 
-  const investment = income - expensesTotal - billsTotal - totalGoals
+  const remaining = income - budgetedExpensesTotal - totalGoals
 
   return {
     income,
-    expensesTotal,
-    billsTotal,
+    budgetedExpensesTotal,
+    normalizedBudgetedExpenses,
     goalContributions,
     totalGoals,
-    investment,
-    isNegative: investment < 0,
+    remaining,
+    isNegative: remaining < 0,
     currency: baseCurrency,
   }
 }

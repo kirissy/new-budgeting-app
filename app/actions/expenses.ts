@@ -2,25 +2,29 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { expenseItemSchema } from '@/lib/schemas'
+import { expenseSchema } from '@/lib/schemas'
 
 export async function createExpense(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const parsed = expenseItemSchema.safeParse({
+  const parsed = expenseSchema.safeParse({
     name: formData.get('name'),
     amount: formData.get('amount'),
     currency: formData.get('currency'),
+    category: formData.get('category'),
+    spent_on: formData.get('spent_on'),
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { error } = await supabase.from('expense_items').insert({
+  const { error } = await supabase.from('expenses').insert({
     user_id: user.id,
     name: parsed.data.name,
     amount: Number(parsed.data.amount),
     currency: parsed.data.currency,
+    category: parsed.data.category,
+    spent_on: parsed.data.spent_on,
   })
 
   if (error) return { error: error.message }
@@ -34,19 +38,23 @@ export async function updateExpense(id: string, formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const parsed = expenseItemSchema.safeParse({
+  const parsed = expenseSchema.safeParse({
     name: formData.get('name'),
     amount: formData.get('amount'),
     currency: formData.get('currency'),
+    category: formData.get('category'),
+    spent_on: formData.get('spent_on'),
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const { error } = await supabase
-    .from('expense_items')
+    .from('expenses')
     .update({
       name: parsed.data.name,
       amount: Number(parsed.data.amount),
       currency: parsed.data.currency,
+      category: parsed.data.category,
+      spent_on: parsed.data.spent_on,
     })
     .eq('id', id)
     .eq('user_id', user.id)
@@ -63,7 +71,7 @@ export async function deleteExpense(id: string) {
   if (!user) throw new Error('Unauthorized')
 
   const { error } = await supabase
-    .from('expense_items')
+    .from('expenses')
     .delete()
     .eq('id', id)
     .eq('user_id', user.id)

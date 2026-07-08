@@ -116,6 +116,14 @@ export default function OnboardingPage() {
                   options={frequencyOptions}
                   defaultValue="monthly"
                 />
+                <Input
+                  label="Payday"
+                  name="effective_date"
+                  type="date"
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                  hint="A recent or upcoming pay date — used to schedule automatic goal deposits"
+                  required
+                />
               </>
             )}
 

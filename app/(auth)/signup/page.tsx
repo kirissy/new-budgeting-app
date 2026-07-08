@@ -52,6 +52,7 @@ export default function SignupPage() {
       <Input
         label="Password"
         type="password"
+        revealable
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="At least 8 characters"

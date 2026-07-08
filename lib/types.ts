@@ -9,6 +9,18 @@ export type Frequency =
 
 export type GoalType = 'holiday' | 'emergency' | 'custom'
 
+export type ExpenseCategory =
+  | 'food_dining'
+  | 'groceries'
+  | 'transport'
+  | 'housing'
+  | 'utilities'
+  | 'shopping'
+  | 'entertainment'
+  | 'health'
+  | 'travel'
+  | 'other'
+
 export interface Profile {
   id: string
   user_id: string
@@ -27,24 +39,27 @@ export interface PayProfile {
   created_at: string
 }
 
-export interface ExpenseItem {
-  id: string
-  user_id: string
-  name: string
-  amount: number
-  currency: string
-  created_at: string
-}
-
-export interface Bill {
+export interface BudgetedExpense {
   id: string
   user_id: string
   name: string
   amount: number
   currency: string
   frequency: Frequency
+  category: ExpenseCategory
   next_due_date: string | null
   active: boolean
+  created_at: string
+}
+
+export interface Expense {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  currency: string
+  category: ExpenseCategory
+  spent_on: string
   created_at: string
 }
 
@@ -57,8 +72,21 @@ export interface Goal {
   currency: string
   target_date: string | null
   current_saved: number
+  last_deposit_date: string | null
   created_at: string
   updated_at: string
+}
+
+export type ContributionSource = 'scheduled' | 'manual'
+
+export interface GoalContributionLog {
+  id: string
+  goal_id: string
+  user_id: string
+  amount: number
+  source: ContributionSource
+  contributed_on: string
+  created_at: string
 }
 
 export interface ExchangeRate {
@@ -71,11 +99,11 @@ export interface ExchangeRate {
 
 export interface BudgetBreakdown {
   income: number
-  expensesTotal: number
-  billsTotal: number
+  budgetedExpensesTotal: number
+  normalizedBudgetedExpenses: BudgetedExpenseNormalized[]
   goalContributions: GoalContribution[]
   totalGoals: number
-  investment: number
+  remaining: number
   isNegative: boolean
   currency: string
 }
@@ -89,7 +117,7 @@ export interface GoalContribution {
   contributionInBase: number
 }
 
-export interface BillNormalized extends Bill {
+export interface BudgetedExpenseNormalized extends BudgetedExpense {
   perCycleAmount: number
   perCycleAmountInBase: number
 }

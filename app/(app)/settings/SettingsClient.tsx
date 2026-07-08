@@ -72,6 +72,18 @@ export function SettingsClient({ profile, payProfile, email }: Props) {
         {profileError && <p className="text-sm text-red-600">{profileError}</p>}
         {profileSuccess && <p className="text-sm text-emerald-600">Saved.</p>}
         <Button type="submit" loading={pending} size="sm">Save</Button>
+        <p className="text-xs text-gray-400">
+          Exchange rates provided by{' '}
+          <a
+            href="https://www.exchangerate-api.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-gray-600"
+          >
+            ExchangeRate-API
+          </a>
+          , refreshed daily.
+        </p>
       </form>
 
       <form ref={incomeFormRef} onSubmit={handleIncome} className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
@@ -100,6 +112,14 @@ export function SettingsClient({ profile, payProfile, email }: Props) {
           name="frequency"
           options={frequencyOptions}
           defaultValue={payProfile?.frequency ?? 'monthly'}
+        />
+        <Input
+          label="Payday"
+          name="effective_date"
+          type="date"
+          defaultValue={payProfile?.effective_date ?? new Date().toISOString().split('T')[0]}
+          hint="A recent or upcoming pay date — used to schedule automatic goal deposits"
+          required
         />
         {incomeError && <p className="text-sm text-red-600">{incomeError}</p>}
         {incomeSuccess && <p className="text-sm text-emerald-600">Saved.</p>}

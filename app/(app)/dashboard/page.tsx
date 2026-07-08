@@ -1,24 +1,14 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { calculateBudget } from '@/lib/calculations'
-import { formatCurrency } from '@/lib/currencies'
+import { calculateBudget, getCurrentCycle } from '@/lib/calculations'
+import { formatCurrency, convertCurrency } from '@/lib/currencies'
+import { getExchangeRates } from '@/lib/exchangeRates'
 import { BudgetDonut } from '@/components/dashboard/BudgetDonut'
 import { GoalCard } from '@/components/dashboard/GoalCard'
 import { WarningBanner } from '@/components/dashboard/WarningBanner'
+import { ExpenseBudgetComparison } from '@/components/dashboard/ExpenseBudgetComparison'
 import type { Frequency } from '@/lib/types'
-
-async function getExchangeRates(baseCurrency: string): Promise<Record<string, number>> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('exchange_rates')
-    .select('target_currency, rate')
-    .eq('base_currency', baseCurrency)
-
-  const rates: Record<string, number> = { [baseCurrency]: 1 }
-  data?.forEach((r) => { rates[r.target_currency] = r.rate })
-  return rates
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -28,15 +18,15 @@ export default async function DashboardPage() {
   const [
     { data: profile },
     { data: payProfile },
-    { data: expenses },
-    { data: bills },
+    { data: budgetedExpenses },
     { data: goals },
+    { data: expenses },
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('user_id', user.id).single(),
     supabase.from('pay_profiles').select('*').eq('user_id', user.id).single(),
-    supabase.from('expense_items').select('*').eq('user_id', user.id).order('created_at'),
-    supabase.from('bills').select('*').eq('user_id', user.id).order('created_at'),
+    supabase.from('budgeted_expenses').select('*').eq('user_id', user.id).order('created_at'),
     supabase.from('goals').select('*').eq('user_id', user.id).order('created_at'),
+    supabase.from('expenses').select('amount, currency, spent_on').eq('user_id', user.id),
   ])
 
   if (!profile || !payProfile) {
@@ -47,15 +37,22 @@ export default async function DashboardPage() {
 
   const breakdown = calculateBudget(
     payProfile,
-    expenses ?? [],
-    bills ?? [],
+    budgetedExpenses ?? [],
     goals ?? [],
     rates,
     profile.base_currency,
     new Date()
   )
 
-  const investmentColor = breakdown.isNegative ? 'text-red-600' : 'text-emerald-600'
+  const cycle = getCurrentCycle(new Date(payProfile.effective_date), payProfile.frequency as Frequency, new Date())
+  const actualExpensesTotal = (expenses ?? [])
+    .filter((e) => {
+      const spentOn = new Date(e.spent_on)
+      return spentOn >= cycle.start && spentOn < cycle.end
+    })
+    .reduce((sum, e) => sum + convertCurrency(e.amount, e.currency, profile.base_currency, rates), 0)
+
+  const remainingColor = breakdown.isNegative ? 'text-red-600' : 'text-emerald-600'
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -69,16 +66,15 @@ export default async function DashboardPage() {
 
       {breakdown.isNegative && (
         <div className="mb-6">
-          <WarningBanner amount={breakdown.investment} currency={profile.base_currency} />
+          <WarningBanner amount={breakdown.remaining} currency={profile.base_currency} />
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {[
           { label: 'Income', value: breakdown.income, color: 'text-violet-700' },
-          { label: 'Expenses', value: breakdown.expensesTotal, color: 'text-indigo-600' },
-          { label: 'Bills', value: breakdown.billsTotal, color: 'text-sky-600' },
-          { label: 'Investment', value: breakdown.investment, color: investmentColor },
+          { label: 'Budgeted Expenses', value: breakdown.budgetedExpensesTotal, color: 'text-indigo-600' },
+          { label: 'Remaining', value: breakdown.remaining, color: remainingColor },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl border border-gray-100 p-4">
             <p className="text-xs font-medium text-gray-500">{item.label}</p>
@@ -87,6 +83,16 @@ export default async function DashboardPage() {
             </p>
           </div>
         ))}
+      </div>
+
+      <div className="mb-6">
+        <ExpenseBudgetComparison
+          actualTotal={actualExpensesTotal}
+          budgetedTotal={breakdown.budgetedExpensesTotal}
+          currency={profile.base_currency}
+          cycleStart={cycle.start}
+          cycleEnd={cycle.end}
+        />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -108,16 +114,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {!expenses?.length && !bills?.length && !goals?.length && (
+      {!budgetedExpenses?.length && !goals?.length && (
         <div className="mt-6 bg-violet-50 rounded-2xl border border-violet-100 p-6">
           <h3 className="font-semibold text-violet-900">Complete your setup</h3>
-          <p className="text-sm text-violet-700 mt-1">Add your expenses, bills, and goals to get your full budget breakdown.</p>
+          <p className="text-sm text-violet-700 mt-1">Add your budgeted expenses and goals to get your full budget breakdown.</p>
           <div className="flex flex-wrap gap-2 mt-3">
-            <Link href="/expenses" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
-              + Add expenses
-            </Link>
-            <Link href="/bills" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
-              + Add bills
+            <Link href="/budgeted-expenses" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
+              + Add budgeted expenses
             </Link>
             <Link href="/goals" className="text-sm bg-white text-violet-700 border border-violet-200 px-3 py-1.5 rounded-lg font-medium hover:bg-violet-50 transition-colors">
               + Add goals
