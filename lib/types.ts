@@ -103,7 +103,7 @@ export interface BudgetBreakdown {
   normalizedBudgetedExpenses: BudgetedExpenseNormalized[]
   goalContributions: GoalContribution[]
   totalGoals: number
-  investment: number
+  remaining: number
   isNegative: boolean
   currency: string
 }

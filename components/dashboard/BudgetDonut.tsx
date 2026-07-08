@@ -6,7 +6,7 @@ import { formatCurrency, getCurrencySymbol } from '@/lib/currencies'
 import { getPercentage } from '@/lib/calculations'
 
 const COLORS = ['#7c3aed', '#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626']
-const INVESTMENT_COLOR = '#6b7280'
+const REMAINING_COLOR = '#6b7280'
 
 const GOAL_COLORS = ['#0891b2', '#059669', '#d97706', '#dc2626', '#8b5cf6', '#ec4899']
 
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function BudgetDonut({ breakdown }: Props) {
-  const { income, normalizedBudgetedExpenses, goalContributions, investment, currency } = breakdown
+  const { income, normalizedBudgetedExpenses, goalContributions, remaining, currency } = breakdown
 
   const data = [
     ...normalizedBudgetedExpenses
@@ -32,7 +32,7 @@ export function BudgetDonut({ breakdown }: Props) {
         value: gc.contributionInBase,
         color: GOAL_COLORS[i % GOAL_COLORS.length],
       })),
-    { name: 'Investment', value: Math.max(0, investment), color: INVESTMENT_COLOR },
+    { name: 'Remaining', value: Math.max(0, remaining), color: REMAINING_COLOR },
   ].filter((d) => d.value > 0)
 
   const sym = getCurrencySymbol(currency)

@@ -160,7 +160,7 @@ export function calculateBudget(
   )
   const totalGoals = goalContributions.reduce((sum, gc) => sum + gc.contributionInBase, 0)
 
-  const investment = income - budgetedExpensesTotal - totalGoals
+  const remaining = income - budgetedExpensesTotal - totalGoals
 
   return {
     income,
@@ -168,8 +168,8 @@ export function calculateBudget(
     normalizedBudgetedExpenses,
     goalContributions,
     totalGoals,
-    investment,
-    isNegative: investment < 0,
+    remaining,
+    isNegative: remaining < 0,
     currency: baseCurrency,
   }
 }

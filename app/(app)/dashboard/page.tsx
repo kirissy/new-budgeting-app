@@ -52,7 +52,7 @@ export default async function DashboardPage() {
     })
     .reduce((sum, e) => sum + convertCurrency(e.amount, e.currency, profile.base_currency, rates), 0)
 
-  const investmentColor = breakdown.isNegative ? 'text-red-600' : 'text-emerald-600'
+  const remainingColor = breakdown.isNegative ? 'text-red-600' : 'text-emerald-600'
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
 
       {breakdown.isNegative && (
         <div className="mb-6">
-          <WarningBanner amount={breakdown.investment} currency={profile.base_currency} />
+          <WarningBanner amount={breakdown.remaining} currency={profile.base_currency} />
         </div>
       )}
 
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
         {[
           { label: 'Income', value: breakdown.income, color: 'text-violet-700' },
           { label: 'Budgeted Expenses', value: breakdown.budgetedExpensesTotal, color: 'text-indigo-600' },
-          { label: 'Investment', value: breakdown.investment, color: investmentColor },
+          { label: 'Remaining', value: breakdown.remaining, color: remainingColor },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-2xl border border-gray-100 p-4">
             <p className="text-xs font-medium text-gray-500">{item.label}</p>
