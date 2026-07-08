@@ -111,6 +111,16 @@ export function GoalForm({ defaultCurrency, expensesTotal, item, onSubmit, onDon
         hint="Needed to calculate per-cycle contribution"
       />
       <Input
+        label="Expected annual return (%)"
+        name="interest_rate"
+        type="number"
+        step="0.01"
+        min="0"
+        defaultValue={item?.interest_rate ?? '0'}
+        placeholder="0"
+        hint="e.g. a savings account or ETF's expected annual rate. Leave at 0 for no growth assumption."
+      />
+      <Input
         label="Already saved"
         name="current_saved"
         type="number"

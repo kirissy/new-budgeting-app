@@ -111,7 +111,21 @@ export function calculateGoalContribution(
     }
   }
 
-  const contribution = remainingAmount / remainingCycles
+  const nominalAnnualRate = goal.interest_rate / 100
+  const periodRate = nominalAnnualRate === 0 ? 0 : Math.pow(1 + nominalAnnualRate, 1 / ANNUAL_MULTIPLIERS[payFreq]) - 1
+  let contribution:number
+
+  if (periodRate === 0) {
+    contribution = remainingAmount / remainingCycles
+  } else {
+    const growthFactor = Math.pow(1 + periodRate, remainingCycles)
+    const futureValueOfSavings = goal.current_saved*growthFactor
+    const annuityFactor = (growthFactor - 1) / periodRate
+    contribution = (goal.target_amount - futureValueOfSavings) / annuityFactor
+  }
+  
+  contribution = Math.max(0, contribution)
+
   const contributionInBase = convertCurrency(contribution, goal.currency, baseCurrency, rates)
 
   return {
