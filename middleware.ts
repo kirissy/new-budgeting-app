@@ -35,8 +35,12 @@ export async function middleware(request: NextRequest) {
   // recovery link establishes a session, and we don't want that to bounce the
   // user to /dashboard before they've had a chance to set their new password.
   const isResetPassword = pathname.startsWith('/reset-password')
+  // Same reasoning — a signup confirmation link can transiently establish a
+  // session too, and we want to show the "verified" state (then sign out)
+  // before sending the user to /login, not bounce them straight to /dashboard.
+  const isVerifyEmail = pathname.startsWith('/verify-email')
   const isProtected =
-    !isAuthRoute && !isResetPassword && !pathname.startsWith('/_next') && !pathname.startsWith('/api')
+    !isAuthRoute && !isResetPassword && !isVerifyEmail && !pathname.startsWith('/_next') && !pathname.startsWith('/api')
 
   if (!user && isProtected && pathname !== '/') {
     const url = request.nextUrl.clone()
