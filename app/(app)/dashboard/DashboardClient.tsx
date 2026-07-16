@@ -11,14 +11,19 @@ import { formatCurrency, convertCurrency, CURRENCIES } from '@/lib/currencies'
 import {
   calculateBudget,
   getCalendarPeriod,
+  getCurrentCycle,
   normalizeToCycle,
   VIEW_PERIODS,
   VIEW_PERIOD_LABELS,
+  type ViewPeriod
 } from '@/lib/calculations'
 import type { BudgetedExpense, BudgetBreakdown, Expense, Frequency, Goal, PayProfile, Profile } from '@/lib/types'
 
 const currencyOptions = CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))
-const periodOptions = VIEW_PERIODS.map((p) => ({ value: p, label: VIEW_PERIOD_LABELS[p] }))
+const periodOptions: { value: ViewPeriod; label: string }[] = [
+  { value: 'pay_cycle', label: 'Pay cycle' },
+  ...VIEW_PERIODS.map((p) => ({ value: p, label: VIEW_PERIOD_LABELS[p] })),
+]
 
 const DEFAULT_VIEW_PERIOD: Record<Frequency, Frequency> = {
   daily: 'weekly',
@@ -50,7 +55,7 @@ interface Props {
 }
 
 export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, expenses, rates }: Props) {
-  const [viewPeriod, setViewPeriod] = useState<Frequency>(DEFAULT_VIEW_PERIOD[payProfile.frequency])
+  const [viewPeriod, setViewPeriod] = useState<ViewPeriod>(DEFAULT_VIEW_PERIOD[payProfile.frequency])
   const [displayCurrency, setDisplayCurrency] = useState(profile.base_currency)
 
   const today = new Date()
@@ -59,8 +64,11 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
   const breakdown = calculateBudget(payProfile, budgetedExpenses, goals, rates, profile.base_currency, today)
 
   function project(amountInBase: number) {
+    const amountInViewPeriod = viewPeriod === 'pay_cycle'
+    ? amountInBase  // breakdown is already per real pay cycle — no conversion needed
+    : normalizeToCycle(amountInBase, payFreq, viewPeriod)
     return convertCurrency(
-      normalizeToCycle(amountInBase, payFreq, viewPeriod),
+      amountInViewPeriod,
       profile.base_currency,
       displayCurrency,
       rates
@@ -84,7 +92,9 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
     currency: displayCurrency,
   }
 
-  const calendarPeriod = getCalendarPeriod(viewPeriod, today)
+  const calendarPeriod = viewPeriod === 'pay_cycle'
+      ? getCurrentCycle(new Date(payProfile.effective_date), payFreq, today)
+      : getCalendarPeriod(viewPeriod, today)
   const actualExpensesTotal = expenses
     .filter((e) => {
       const spentOn = new Date(e.spent_on)
@@ -152,7 +162,7 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
           currency={displayCurrency}
           cycleStart={calendarPeriod.start}
           cycleEnd={calendarPeriod.end}
-          periodLabel={PERIOD_PHRASE[viewPeriod]}
+          periodLabel={viewPeriod === 'pay_cycle' ? 'this pay cycle' : PERIOD_PHRASE[viewPeriod]}
         />
       </div>
 

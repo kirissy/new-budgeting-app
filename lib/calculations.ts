@@ -33,6 +33,7 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
 // Selectable dashboard view periods — a subset of Frequency, with "annually"
 // relabeled "Yearly" to match how users refer to it when picking a view.
 export const VIEW_PERIODS = ['weekly', 'biweekly', 'monthly', 'annually'] as const satisfies readonly Frequency[]
+export type ViewPeriod = Frequency | 'pay_cycle'
 
 export const VIEW_PERIOD_LABELS: Record<Frequency, string> = {
   ...FREQUENCY_LABELS,
