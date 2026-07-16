@@ -7,9 +7,15 @@ interface ModalProps {
   onClose: () => void
   title: string
   children: ReactNode
+  size?: 'md' | 'xl'
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+const sizeClasses = {
+  md: 'max-w-md',
+  xl: 'max-w-4xl',
+}
+
+export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -32,7 +38,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-xl">
+      <div className={`relative w-full ${sizeClasses[size]} rounded-2xl bg-white shadow-xl`}>
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 id="modal-title" className="text-base font-semibold text-gray-900">
             {title}

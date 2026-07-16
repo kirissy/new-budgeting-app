@@ -8,11 +8,14 @@ import { ExpenseForm } from '@/components/forms/ExpenseForm'
 import { createExpense, updateExpense, deleteExpense } from '@/app/actions/expenses'
 import { formatCurrency } from '@/lib/currencies'
 import { CATEGORY_LABELS } from '@/lib/categories'
-import type { Expense, ExpenseCategory } from '@/lib/types'
+import { format } from 'date-fns'
+import { ImportExpensesModal } from '@/components/forms/ImportExpensesModal'
+import type { Expense, ExpenseCategory, BudgetedExpense } from '@/lib/types'
 
 interface Props {
   expenses: Expense[]
   defaultCurrency: string
+  budgetedExpenses: BudgetedExpense[]
 }
 
 const categoryFilterOptions = [
@@ -20,9 +23,10 @@ const categoryFilterOptions = [
   ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ value: v, label: l })),
 ]
 
-export function ExpensesClient({ expenses, defaultCurrency }: Props) {
+export function ExpensesClient({ expenses, defaultCurrency, budgetedExpenses }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | 'all'>('all')
   const [, startTransition] = useTransition()
 
@@ -51,9 +55,11 @@ export function ExpensesClient({ expenses, defaultCurrency }: Props) {
               onChange={(e) => setCategoryFilter(e.target.value as ExpenseCategory | 'all')}
             />
           </div>
-          <Button onClick={openAdd} size="sm">+ Add expense</Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setImportOpen(true)} size="sm" variant="secondary">Import CSV</Button>
+            <Button onClick={openAdd} size="sm">+ Add expense</Button>
+          </div>
         </div>
-
         {filteredExpenses.length === 0 ? (
           <div className="px-5 py-12 text-center text-gray-500 text-sm">
             {expenses.length === 0 ? 'No expenses logged yet. Add your first one.' : 'No expenses in this category.'}
@@ -64,6 +70,7 @@ export function ExpensesClient({ expenses, defaultCurrency }: Props) {
               <li key={expense.id} className="px-5 py-3.5">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
+                    
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-900 truncate">{expense.name}</p>
                       <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
@@ -71,7 +78,7 @@ export function ExpensesClient({ expenses, defaultCurrency }: Props) {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {new Date(expense.spent_on).toLocaleDateString()}
+                      {format(new Date(expense.spent_on), 'MMM d, yyyy')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-3">
@@ -94,6 +101,13 @@ export function ExpensesClient({ expenses, defaultCurrency }: Props) {
           item={editing ?? undefined}
           onSubmit={editing ? (fd) => updateExpense(editing.id, fd) : createExpense}
           onDone={closeModal}
+        />
+      </Modal>
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Import expenses from CSV" size = "xl">
+      <ImportExpensesModal
+        defaultCurrency={defaultCurrency}
+        budgetedExpenses={budgetedExpenses}
+        onDone={() => setImportOpen(false)}
         />
       </Modal>
     </>

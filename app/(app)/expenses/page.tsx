@@ -17,7 +17,7 @@ export default async function ExpensesPage() {
       supabase.from('profiles').select('base_currency').eq('user_id', user.id).single(),
       supabase.from('pay_profiles').select('frequency, effective_date').eq('user_id', user.id).single(),
       supabase.from('expenses').select('*').eq('user_id', user.id).order('spent_on', { ascending: false }),
-      supabase.from('budgeted_expenses').select('amount, currency, frequency, active').eq('user_id', user.id),
+      supabase.from('budgeted_expenses').select('*').eq('user_id', user.id),
     ])
 
   const baseCurrency = profile?.base_currency ?? 'USD'
@@ -62,7 +62,10 @@ export default async function ExpensesPage() {
           cycleEnd={cycleEnd}
         />
       </div>
-      <ExpensesClient expenses={expenses ?? []} defaultCurrency={baseCurrency} />
+      <ExpensesClient 
+        expenses={expenses ?? []} 
+        defaultCurrency={baseCurrency}
+        budgetedExpenses={(budgetedExpenses ?? []).filter((b) => b.active)} />
     </div>
   )
 }
