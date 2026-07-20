@@ -6,7 +6,14 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { GoalForm } from '@/components/forms/GoalForm'
-import { createGoal, updateGoal, deleteGoal, addGoalContribution } from '@/app/actions/goals'
+import {
+  createGoal,
+  updateGoal,
+  deleteGoal,
+  addGoalContribution,
+  updateGoalContribution,
+  deleteGoalContribution,
+} from '@/app/actions/goals'
 import { calculateGoalContribution, getNextPayDate, FREQUENCY_LABELS } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/currencies'
 import type { Goal, Frequency, GoalContributionLog } from '@/lib/types'
@@ -27,6 +34,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)
   const [contribModalGoal, setContribModalGoal] = useState<Goal | null>(null)
+  const [editingContribution, setEditingContribution] = useState<GoalContributionLog | null>(null)
   const [contribAmount, setContribAmount] = useState('')
   const [contribDate, setContribDate] = useState(todayInputValue())
   const [contribError, setContribError] = useState('')
@@ -39,17 +47,34 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
 
   function openContribModal(goal: Goal) {
     setContribModalGoal(goal)
+    setEditingContribution(null)
     setContribAmount('')
     setContribDate(todayInputValue())
     setContribError('')
   }
-  function closeContribModal() { setContribModalGoal(null); setContribAmount(''); setContribError('') }
+  function openEditContribModal(goal: Goal, contribution: GoalContributionLog) {
+    setContribModalGoal(goal)
+    setEditingContribution(contribution)
+    setContribAmount(String(contribution.amount))
+    setContribDate(contribution.contributed_on.split('T')[0])
+    setContribError('')
+  }
+  function closeContribModal() {
+    setContribModalGoal(null)
+    setEditingContribution(null)
+    setContribAmount('')
+    setContribError('')
+  }
 
   function handleDelete(id: string) {
     startTransition(async () => { await deleteGoal(id) })
   }
 
-  function handleAddContribution() {
+  function handleDeleteContribution(id: string) {
+    startTransition(async () => { await deleteGoalContribution(id) })
+  }
+
+  function handleSubmitContribution() {
     if (!contribModalGoal) return
     const val = Number(contribAmount)
     if (isNaN(val) || val <= 0) { setContribError('Enter a positive amount'); return }
@@ -57,7 +82,9 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
     formData.set('amount', contribAmount)
     formData.set('contributed_on', contribDate)
     startTransition(async () => {
-      const result = await addGoalContribution(contribModalGoal.id, formData)
+      const result = editingContribution
+        ? await updateGoalContribution(editingContribution.id, formData)
+        : await addGoalContribution(contribModalGoal.id, formData)
       if (result?.error) { setContribError(result.error); return }
       closeContribModal()
     })
@@ -182,14 +209,32 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
                     {historyOpenId === goal.id && (
                       <ul className="mt-2 space-y-1">
                         {contributionsByGoal[goal.id].slice(0, 10).map((c) => (
-                          <li key={c.id} className="flex justify-between text-xs text-gray-500">
+                          <li key={c.id} className="flex items-center justify-between gap-2 text-xs text-gray-500">
                             <span>
                               {format(new Date(c.contributed_on), 'MMM d, yyyy')}
                               <span className={`ml-2 px-1.5 py-0.5 rounded-full ${c.source === 'manual' ? 'bg-gray-100 text-gray-500' : 'bg-violet-50 text-violet-600'}`}>
                                 {c.source === 'manual' ? 'Manual' : 'Auto'}
                               </span>
                             </span>
-                            <span className="font-medium text-gray-700">{formatCurrency(c.amount, goal.currency)}</span>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">{formatCurrency(c.amount, goal.currency)}</span>
+                              {c.source === 'manual' && (
+                                <>
+                                  <button
+                                    onClick={() => openEditContribModal(goal, c)}
+                                    className="text-gray-400 hover:text-gray-700"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteContribution(c.id)}
+                                    className="text-red-400 hover:text-red-600"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              )}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -212,11 +257,15 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
         />
       </Modal>
 
-      <Modal open={!!contribModalGoal} onClose={closeContribModal} title="Add contribution">
+      <Modal open={!!contribModalGoal} onClose={closeContribModal} title={editingContribution ? 'Edit contribution' : 'Add contribution'}>
         {contribModalGoal && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-gray-600">
-              Add an amount to <strong>{contribModalGoal.name}</strong>. This adds to the current total and is logged with the date.
+              {editingContribution ? (
+                <>Edit this manual contribution to <strong>{contribModalGoal.name}</strong>. The goal total will be adjusted to match.</>
+              ) : (
+                <>Add an amount to <strong>{contribModalGoal.name}</strong>. This adds to the current total and is logged with the date.</>
+              )}
             </p>
             <Input
               label="Amount"
@@ -236,7 +285,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
             />
             {contribError && <p className="text-sm text-red-600">{contribError}</p>}
             <div className="flex gap-2">
-              <Button onClick={handleAddContribution} className="flex-1">Add</Button>
+              <Button onClick={handleSubmitContribution} className="flex-1">{editingContribution ? 'Save' : 'Add'}</Button>
               <Button variant="secondary" onClick={closeContribModal}>Cancel</Button>
             </div>
           </div>
