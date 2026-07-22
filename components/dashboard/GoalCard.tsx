@@ -1,12 +1,14 @@
 import type { GoalContribution, Frequency } from '@/lib/types'
 import { formatCurrency, convertCurrency } from '@/lib/currencies'
-import { VIEW_PERIOD_LABELS, normalizeToCycle } from '@/lib/calculations'
-import { format } from 'date-fns'
+import { formatDate } from '@/lib/dates'
+import { VIEW_MODE_UNIT, projectToRange } from '@/lib/viewPeriod'
+import type { ViewMode, ResolvedRange } from '@/lib/viewPeriod'
 
 interface Props {
   gc: GoalContribution
   payFreq: Frequency
-  viewPeriod: Frequency
+  viewMode: ViewMode
+  range: ResolvedRange
   displayCurrency: string
   rates: Record<string, number>
 }
@@ -25,7 +27,7 @@ const STATUS_LABELS = {
   'on-track': 'On track',
 }
 
-export function GoalCard({ gc, payFreq, viewPeriod, displayCurrency, rates }: Props) {
+export function GoalCard({ gc, payFreq, viewMode, range, displayCurrency, rates }: Props) {
   const { goal, contribution, status, remainingCycles, remainingAmount } = gc
   const progress = Math.min(100, (goal.current_saved / goal.target_amount) * 100)
 
@@ -33,7 +35,7 @@ export function GoalCard({ gc, payFreq, viewPeriod, displayCurrency, rates }: Pr
   const targetAmount = convertCurrency(goal.target_amount, goal.currency, displayCurrency, rates)
   const remaining = convertCurrency(remainingAmount, goal.currency, displayCurrency, rates)
   const contributionDisplay = convertCurrency(
-    normalizeToCycle(contribution, payFreq, viewPeriod),
+    projectToRange(contribution, payFreq, range),
     goal.currency,
     displayCurrency,
     rates
@@ -46,7 +48,7 @@ export function GoalCard({ gc, payFreq, viewPeriod, displayCurrency, rates }: Pr
           <h3 className="font-medium text-gray-900">{goal.name}</h3>
           {goal.target_date && (
             <p className="text-xs text-gray-500 mt-0.5">
-              Target: {format(new Date(goal.target_date), 'MMM d, yyyy')}
+              Target: {formatDate(goal.target_date)}
             </p>
           )}
         </div>
@@ -77,7 +79,7 @@ export function GoalCard({ gc, payFreq, viewPeriod, displayCurrency, rates }: Pr
       {status === 'on-track' && (
         <div className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
           <span className="font-medium text-gray-900">{formatCurrency(contributionDisplay, displayCurrency)}</span>
-          <span className="text-gray-500"> / {VIEW_PERIOD_LABELS[viewPeriod].toLowerCase()} · {remainingCycles} pay cycles left</span>
+          <span className="text-gray-500"> / {VIEW_MODE_UNIT[viewMode]} · {remainingCycles} pay cycles left</span>
         </div>
       )}
       {status === 'overdue' && (

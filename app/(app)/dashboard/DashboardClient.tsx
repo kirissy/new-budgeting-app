@@ -1,43 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Select } from '@/components/ui/Select'
 import { BudgetDonut } from '@/components/dashboard/BudgetDonut'
 import { GoalCard } from '@/components/dashboard/GoalCard'
 import { WarningBanner } from '@/components/dashboard/WarningBanner'
 import { ExpenseBudgetComparison } from '@/components/dashboard/ExpenseBudgetComparison'
+import { ViewPeriodSelector } from '@/components/dashboard/ViewPeriodSelector'
 import { formatCurrency, convertCurrency, CURRENCIES } from '@/lib/currencies'
-import {
-  calculateBudget,
-  getCalendarPeriod,
-  normalizeToCycle,
-  VIEW_PERIODS,
-  VIEW_PERIOD_LABELS,
-} from '@/lib/calculations'
-import type { BudgetedExpense, BudgetBreakdown, Expense, Frequency, Goal, PayProfile, Profile } from '@/lib/types'
+import { calculateBudget } from '@/lib/calculations'
+import { defaultViewSelection, resolveViewRange, projectToRange, isWithinRange } from '@/lib/viewPeriod'
+import type { ViewMode, ViewSelection } from '@/lib/viewPeriod'
+import type { BudgetedExpense, BudgetBreakdown, Expense, Goal, PayProfile, Profile } from '@/lib/types'
 
 const currencyOptions = CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))
-const periodOptions = VIEW_PERIODS.map((p) => ({ value: p, label: VIEW_PERIOD_LABELS[p] }))
 
-const DEFAULT_VIEW_PERIOD: Record<Frequency, Frequency> = {
-  daily: 'weekly',
-  weekly: 'weekly',
-  biweekly: 'biweekly',
-  'semi-monthly': 'monthly',
-  monthly: 'monthly',
-  quarterly: 'monthly',
-  annually: 'annually',
-}
-
-const PERIOD_PHRASE: Record<Frequency, string> = {
-  daily: 'today',
+const PERIOD_PHRASE: Record<ViewMode, string> = {
+  pay_cycle: 'this cycle',
   weekly: 'this week',
-  biweekly: 'the last 2 weeks',
-  'semi-monthly': 'this half-month',
   monthly: 'this month',
-  quarterly: 'this quarter',
-  annually: 'this year',
+  yearly: 'this year',
+  all: 'all time',
+  custom: 'this period',
 }
 
 interface Props {
@@ -50,17 +35,22 @@ interface Props {
 }
 
 export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, expenses, rates }: Props) {
-  const [viewPeriod, setViewPeriod] = useState<Frequency>(DEFAULT_VIEW_PERIOD[payProfile.frequency])
+  const [view, setView] = useState<ViewSelection>(defaultViewSelection(true))
   const [displayCurrency, setDisplayCurrency] = useState(profile.base_currency)
 
   const today = new Date()
   const payFreq = payProfile.frequency
 
+  const range = useMemo(
+    () => resolveViewRange(view, new Date(payProfile.effective_date), payFreq, new Date()),
+    [view, payProfile.effective_date, payFreq]
+  )
+
   const breakdown = calculateBudget(payProfile, budgetedExpenses, goals, rates, profile.base_currency, today)
 
   function project(amountInBase: number) {
     return convertCurrency(
-      normalizeToCycle(amountInBase, payFreq, viewPeriod),
+      projectToRange(amountInBase, payFreq, range),
       profile.base_currency,
       displayCurrency,
       rates
@@ -84,12 +74,8 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
     currency: displayCurrency,
   }
 
-  const calendarPeriod = getCalendarPeriod(viewPeriod, today)
   const actualExpensesTotal = expenses
-    .filter((e) => {
-      const spentOn = new Date(e.spent_on)
-      return spentOn >= calendarPeriod.start && spentOn < calendarPeriod.end
-    })
+    .filter((e) => isWithinRange(e.spent_on, range))
     .reduce((sum, e) => sum + convertCurrency(e.amount, e.currency, displayCurrency, rates), 0)
 
   const remainingColor = displayBreakdown.isNegative ? 'text-red-600' : 'text-emerald-600'
@@ -104,15 +90,8 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
             {profile.base_currency}
           </p>
         </div>
-        <div className="flex gap-2">
-          <div className="w-36">
-            <Select
-              label="View as"
-              options={periodOptions}
-              value={viewPeriod}
-              onChange={(e) => setViewPeriod(e.target.value as Frequency)}
-            />
-          </div>
+        <div className="flex items-start gap-2">
+          <ViewPeriodSelector value={view} onChange={setView} hasPayCycle range={range} />
           <div className="w-40">
             <Select
               label="Currency"
@@ -150,9 +129,9 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
           actualTotal={actualExpensesTotal}
           budgetedTotal={displayBreakdown.budgetedExpensesTotal}
           currency={displayCurrency}
-          cycleStart={calendarPeriod.start}
-          cycleEnd={calendarPeriod.end}
-          periodLabel={PERIOD_PHRASE[viewPeriod]}
+          cycleStart={range.start}
+          cycleEnd={range.end}
+          periodLabel={PERIOD_PHRASE[view.mode]}
         />
       </div>
 
@@ -173,7 +152,8 @@ export function DashboardClient({ profile, payProfile, budgetedExpenses, goals, 
                 key={gc.goal.id}
                 gc={gc}
                 payFreq={payFreq}
-                viewPeriod={viewPeriod}
+                viewMode={view.mode}
+                range={range}
                 displayCurrency={displayCurrency}
                 rates={rates}
               />

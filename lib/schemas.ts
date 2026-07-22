@@ -79,9 +79,21 @@ export const manualContributionSchema = z.object({
     .refine((v) => new Date(v).getTime() <= Date.now() + 24 * 60 * 60 * 1000, 'Date cannot be in the future'),
 })
 
+export const importedExpenseSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  amount: z.number().positive('Must be a positive number'),
+  currency: z.string().min(1, 'Currency is required'),
+  category: z.enum(EXPENSE_CATEGORIES, 'Select a category'),
+  spent_on: z
+    .string()
+    .min(1, 'Date is required')
+    .refine((v) => new Date(v).getTime() <= Date.now() + 24 * 60 * 60 * 1000, 'Date cannot be in the future'),
+})
+
 export type PayProfileInput = z.infer<typeof payProfileSchema>
 export type ManualContributionInput = z.infer<typeof manualContributionSchema>
 export type ProfileInput = z.infer<typeof profileSchema>
 export type BudgetedExpenseInput = z.infer<typeof budgetedExpenseSchema>
 export type ExpenseInput = z.infer<typeof expenseSchema>
 export type GoalInput = z.infer<typeof goalSchema>
+export type ImportedExpenseInput = z.infer<typeof importedExpenseSchema>

@@ -1,6 +1,5 @@
 'use client'
 
-import { format } from 'date-fns'
 import { useState, useTransition } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -16,6 +15,7 @@ import {
 } from '@/app/actions/goals'
 import { calculateGoalContribution, FREQUENCY_LABELS } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/currencies'
+import { formatDate } from '@/lib/dates'
 import type { Goal, Frequency, GoalContributionLog } from '@/lib/types'
 
 interface Props {
@@ -131,7 +131,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTota
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
                       Target: {formatCurrency(goal.target_amount, goal.currency)}
-                      {goal.target_date && ` · Due ${format(new Date(goal.target_date), 'MMM d, yyyy')}`}
+                      {goal.target_date && ` · Due ${formatDate(goal.target_date)}`}
                     </p>
                   </div>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${statusColors[gc.status]}`}>
@@ -204,7 +204,7 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTota
                         {contributionsByGoal[goal.id].slice(0, 10).map((c) => (
                           <li key={c.id} className="flex items-center justify-between gap-2 text-xs text-gray-500">
                             <span>
-                              {format(new Date(c.contributed_on), 'MMM d, yyyy')}
+                              {formatDate(c.contributed_on)}
                               <span className={`ml-2 px-1.5 py-0.5 rounded-full ${c.source === 'manual' ? 'bg-gray-100 text-gray-500' : 'bg-violet-50 text-violet-600'}`}>
                                 {c.source === 'manual' ? 'Manual' : 'Auto'}
                               </span>

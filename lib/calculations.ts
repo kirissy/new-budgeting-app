@@ -1,4 +1,4 @@
-import { differenceInDays, addDays, startOfWeek, addWeeks, startOfMonth, addMonths, startOfYear, addYears } from 'date-fns'
+import { differenceInDays, addDays } from 'date-fns'
 import type {
   BudgetedExpense,
   BudgetedExpenseNormalized,
@@ -30,15 +30,6 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   annually: 'Annually',
 }
 
-// Selectable dashboard view periods — a subset of Frequency, with "annually"
-// relabeled "Yearly" to match how users refer to it when picking a view.
-export const VIEW_PERIODS = ['weekly', 'biweekly', 'monthly', 'annually'] as const satisfies readonly Frequency[]
-
-export const VIEW_PERIOD_LABELS: Record<Frequency, string> = {
-  ...FREQUENCY_LABELS,
-  annually: 'Yearly',
-}
-
 export function getCurrentCycle(anchor: Date, freq: Frequency, today: Date): { start: Date; end: Date } {
   const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
   let end = new Date(anchor)
@@ -49,22 +40,20 @@ export function getCurrentCycle(anchor: Date, freq: Frequency, today: Date): { s
   return { start, end }
 }
 
-export function getCalendarPeriod(period: Frequency, today: Date): { start: Date; end: Date } {
-  switch (period) {
-    case 'weekly':
-      return {
-        start: startOfWeek(today, { weekStartsOn: 1 }),
-        end: startOfWeek(addWeeks(today, 1), { weekStartsOn: 1 }),
-      }
-    case 'biweekly':
-      return { start: addDays(today, -13), end: addDays(today, 1) }
-    case 'monthly':
-      return { start: startOfMonth(today), end: startOfMonth(addMonths(today, 1)) }
-    case 'annually':
-      return { start: startOfYear(today), end: startOfYear(addYears(today, 1)) }
-    default:
-      return { start: startOfMonth(today), end: startOfMonth(addMonths(today, 1)) }
-  }
+// Cycle boundaries relative to the current one (offset 0 = current, -1 =
+// previous, +1 = next), using the same fixed-day-length approximation as
+// getCurrentCycle so cycles stay contiguous when stepping back/forward.
+export function getPayCycle(
+  anchor: Date,
+  freq: Frequency,
+  today: Date,
+  offset: number
+): { start: Date; end: Date } {
+  const current = getCurrentCycle(anchor, freq, today)
+  if (offset === 0) return current
+  const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
+  const shift = offset * daysPerCycle
+  return { start: addDays(current.start, shift), end: addDays(current.end, shift) }
 }
 
 export function normalizeToCycle(

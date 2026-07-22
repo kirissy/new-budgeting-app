@@ -1,12 +1,13 @@
-import { format, subDays } from 'date-fns'
+import { subDays } from 'date-fns'
 import { formatCurrency } from '@/lib/currencies'
+import { formatDate } from '@/lib/dates'
 
 interface Props {
   actualTotal: number
   budgetedTotal: number
   currency: string
-  cycleStart: Date
-  cycleEnd: Date
+  cycleStart: Date | null
+  cycleEnd: Date | null
   periodLabel?: string
 }
 
@@ -14,7 +15,7 @@ export function ExpenseBudgetComparison({ actualTotal, budgetedTotal, currency, 
   const isOver = budgetedTotal > 0 && actualTotal > budgetedTotal
   const progress = budgetedTotal > 0 ? Math.min(100, (actualTotal / budgetedTotal) * 100) : 0
   // cycleEnd is an exclusive upper bound — display the inclusive last day instead.
-  const inclusiveEnd = subDays(cycleEnd, 1)
+  const inclusiveEnd = cycleEnd ? subDays(cycleEnd, 1) : null
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6">
@@ -22,7 +23,7 @@ export function ExpenseBudgetComparison({ actualTotal, budgetedTotal, currency, 
         <div>
           <h2 className="text-base font-semibold text-gray-900">Logged {periodLabel}</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {format(cycleStart, 'MMM d, yyyy')} – {format(inclusiveEnd, 'MMM d, yyyy')}
+            {cycleStart && inclusiveEnd ? `${formatDate(cycleStart)} – ${formatDate(inclusiveEnd)}` : 'All time'}
           </p>
         </div>
         <span

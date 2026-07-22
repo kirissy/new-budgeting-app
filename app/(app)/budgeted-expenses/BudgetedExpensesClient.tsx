@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { BudgetedExpenseForm } from '@/components/forms/BudgetedExpenseForm'
+import { ViewPeriodSelector } from '@/components/dashboard/ViewPeriodSelector'
 import { createBudgetedExpense, updateBudgetedExpense, deleteBudgetedExpense, toggleBudgetedExpenseActive } from '@/app/actions/budgetedExpenses'
 import { formatCurrency } from '@/lib/currencies'
-import { normalizeToCycle, FREQUENCY_LABELS } from '@/lib/calculations'
+import { FREQUENCY_LABELS } from '@/lib/calculations'
+import { defaultViewSelection, resolveViewRange, projectToRange, VIEW_MODE_UNIT } from '@/lib/viewPeriod'
+import type { ViewSelection } from '@/lib/viewPeriod'
 import { CATEGORY_LABELS } from '@/lib/categories'
 import type { BudgetedExpense, Frequency } from '@/lib/types'
 
@@ -14,16 +17,23 @@ interface Props {
   budgetedExpenses: BudgetedExpense[]
   defaultCurrency: string
   payFrequency: Frequency
+  payAnchor: string | null
 }
 
-export function BudgetedExpensesClient({ budgetedExpenses, defaultCurrency, payFrequency }: Props) {
+export function BudgetedExpensesClient({ budgetedExpenses, defaultCurrency, payFrequency, payAnchor }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<BudgetedExpense | null>(null)
+  const [view, setView] = useState<ViewSelection>(defaultViewSelection(!!payAnchor))
   const [, startTransition] = useTransition()
 
+  const range = useMemo(
+    () => resolveViewRange(view, payAnchor ? new Date(payAnchor) : null, payFrequency, new Date()),
+    [view, payAnchor, payFrequency]
+  )
+
   const activeExpenses = budgetedExpenses.filter((e) => e.active)
-  const totalPerCycle = activeExpenses.reduce(
-    (s, e) => s + normalizeToCycle(e.amount, e.frequency, payFrequency),
+  const totalPerView = activeExpenses.reduce(
+    (s, e) => s + projectToRange(e.amount, e.frequency, range),
     0
   )
 
@@ -42,14 +52,17 @@ export function BudgetedExpensesClient({ budgetedExpenses, defaultCurrency, payF
   return (
     <>
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4 border-b border-gray-100">
           <div>
-            <span className="font-medium text-gray-900">
-              Per-cycle total
-            </span>
-            <span className="ml-2 text-lg font-bold text-violet-700">
-              {formatCurrency(totalPerCycle, defaultCurrency)}
-            </span>
+            <div className="mb-2">
+              <span className="font-medium text-gray-900">
+                Total / {VIEW_MODE_UNIT[view.mode]}
+              </span>
+              <span className="ml-2 text-lg font-bold text-violet-700">
+                {formatCurrency(totalPerView, defaultCurrency)}
+              </span>
+            </div>
+            <ViewPeriodSelector value={view} onChange={setView} hasPayCycle={!!payAnchor} range={range} />
           </div>
           <Button onClick={openAdd} size="sm">+ Add budgeted expense</Button>
         </div>
@@ -61,7 +74,7 @@ export function BudgetedExpensesClient({ budgetedExpenses, defaultCurrency, payF
         ) : (
           <ul className="divide-y divide-gray-50">
             {budgetedExpenses.map((expense) => {
-              const perCycle = normalizeToCycle(expense.amount, expense.frequency, payFrequency)
+              const perView = projectToRange(expense.amount, expense.frequency, range)
               return (
                 <li key={expense.id} className={`px-5 py-3.5 ${!expense.active ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between">
@@ -88,9 +101,9 @@ export function BudgetedExpensesClient({ budgetedExpenses, defaultCurrency, payF
                     <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(perCycle, expense.currency)}
+                          {formatCurrency(perView, expense.currency)}
                         </p>
-                        <p className="text-xs text-gray-400">per cycle</p>
+                        <p className="text-xs text-gray-400">/ {VIEW_MODE_UNIT[view.mode]}</p>
                       </div>
                       <button onClick={() => openEdit(expense)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Edit</button>
                       <button onClick={() => handleDelete(expense.id)} className="text-xs text-red-400 hover:text-red-600 transition-colors">Delete</button>

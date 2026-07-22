@@ -10,7 +10,7 @@ export default async function BudgetedExpensesPage() {
 
   const [{ data: profile }, { data: payProfile }, { data: budgetedExpenses }] = await Promise.all([
     supabase.from('profiles').select('base_currency').eq('user_id', user.id).single(),
-    supabase.from('pay_profiles').select('frequency').eq('user_id', user.id).single(),
+    supabase.from('pay_profiles').select('frequency, effective_date').eq('user_id', user.id).single(),
     supabase.from('budgeted_expenses').select('*').eq('user_id', user.id).order('created_at'),
   ])
 
@@ -18,12 +18,13 @@ export default async function BudgetedExpensesPage() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Budgeted Expenses</h1>
-        <p className="text-sm text-gray-500 mt-1">Recurring costs and subscriptions, normalized to your pay cycle</p>
+        <p className="text-sm text-gray-500 mt-1">Recurring costs and subscriptions — view them by pay cycle, week, month, year, or a custom range</p>
       </div>
       <BudgetedExpensesClient
         budgetedExpenses={budgetedExpenses ?? []}
         defaultCurrency={profile?.base_currency ?? 'USD'}
         payFrequency={(payProfile?.frequency ?? 'monthly') as Frequency}
+        payAnchor={payProfile?.effective_date ?? null}
       />
     </div>
   )
