@@ -66,12 +66,13 @@ create table if not exists goals (
   target_date date,
   current_saved numeric(20, 4) not null default 0,
   interest_rate numeric(6, 3) not null default 0,   -- annual %, e.g. 5.000 for 5%
-  last_deposit_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
--- Goal contributions ledger (both scheduled auto-deposits and manual top-ups)
+-- Goal contributions ledger (manual top-ups only; 'scheduled' is kept in the
+-- check constraint so historical auto-deposit rows from the retired cron job
+-- still satisfy it, but new rows are always 'manual')
 create table if not exists goal_contributions (
   id uuid primary key default uuid_generate_v4(),
   goal_id uuid not null references goals(id) on delete cascade,

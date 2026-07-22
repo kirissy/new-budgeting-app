@@ -73,7 +73,6 @@ export interface Goal {
   target_date: string | null
   current_saved: number
   interest_rate: number   // annual %
-  last_deposit_date: string | null
   created_at: string
   updated_at: string
 }

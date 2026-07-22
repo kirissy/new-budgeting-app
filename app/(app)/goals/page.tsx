@@ -12,7 +12,7 @@ export default async function GoalsPage() {
   const [{ data: profile }, { data: payProfile }, { data: goals }, { data: budgetedExpenses }, { data: contributions }] =
     await Promise.all([
       supabase.from('profiles').select('base_currency').eq('user_id', user.id).single(),
-      supabase.from('pay_profiles').select('frequency, effective_date').eq('user_id', user.id).single(),
+      supabase.from('pay_profiles').select('frequency').eq('user_id', user.id).single(),
       supabase.from('goals').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('budgeted_expenses').select('amount, frequency, active').eq('user_id', user.id),
       supabase
@@ -45,7 +45,6 @@ export default async function GoalsPage() {
         goals={goals ?? []}
         defaultCurrency={profile?.base_currency ?? 'USD'}
         payFrequency={payFrequency}
-        payAnchor={payProfile?.effective_date ?? null}
         expensesTotal={expensesTotal}
         contributionsByGoal={contributionsByGoal}
       />

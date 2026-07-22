@@ -14,7 +14,7 @@ import {
   updateGoalContribution,
   deleteGoalContribution,
 } from '@/app/actions/goals'
-import { calculateGoalContribution, getNextPayDate, FREQUENCY_LABELS } from '@/lib/calculations'
+import { calculateGoalContribution, FREQUENCY_LABELS } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/currencies'
 import type { Goal, Frequency, GoalContributionLog } from '@/lib/types'
 
@@ -22,7 +22,6 @@ interface Props {
   goals: Goal[]
   defaultCurrency: string
   payFrequency: Frequency
-  payAnchor: string | null
   expensesTotal: number
   contributionsByGoal: Record<string, GoalContributionLog[]>
 }
@@ -30,7 +29,7 @@ interface Props {
 const GOAL_TYPE_LABELS = { holiday: 'Holiday', emergency: 'Emergency', custom: 'Custom' }
 const todayInputValue = () => new Date().toISOString().split('T')[0]
 
-export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, expensesTotal, contributionsByGoal }: Props) {
+export function GoalsClient({ goals, defaultCurrency, payFrequency, expensesTotal, contributionsByGoal }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)
   const [contribModalGoal, setContribModalGoal] = useState<Goal | null>(null)
@@ -158,12 +157,6 @@ export function GoalsClient({ goals, defaultCurrency, payFrequency, payAnchor, e
                     <span className="font-medium text-gray-900">{formatCurrency(gc.contribution, goal.currency)}</span>
                     {' '}/ {FREQUENCY_LABELS[payFrequency].toLowerCase()}
                     <span className="text-gray-400 ml-1">({gc.remainingCycles} cycles left)</span>
-                    {payAnchor && (
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        Next auto-deposit: {format(getNextPayDate(new Date(payAnchor), payFrequency, today), 'MMM d, yyyy')}
-                        {' '}· {formatCurrency(gc.contribution, goal.currency)}
-                      </div>
-                    )}
                   </div>
                 )}
                 {gc.status === 'overdue' && (

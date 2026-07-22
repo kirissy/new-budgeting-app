@@ -39,15 +39,6 @@ export const VIEW_PERIOD_LABELS: Record<Frequency, string> = {
   annually: 'Yearly',
 }
 
-export function getNextPayDate(anchor: Date, freq: Frequency, from: Date): Date {
-  const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
-  let next = new Date(anchor)
-  while (next < from) {
-    next = addDays(next, daysPerCycle)
-  }
-  return next
-}
-
 export function getCurrentCycle(anchor: Date, freq: Frequency, today: Date): { start: Date; end: Date } {
   const daysPerCycle = Math.round(365 / ANNUAL_MULTIPLIERS[freq])
   let end = new Date(anchor)
